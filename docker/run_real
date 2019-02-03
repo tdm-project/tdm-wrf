@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -euo pipefail
+
+WPSRUN=$1
+
+COMPONENT=real
+
+cd ${WPSRUN}
+
+ln -sf /wrf/WRF/run/${COMPONENT}.exe .
+
+# Command for COMPONENT
+./${COMPONENT}.exe >& print.${COMPONENT}.txt
+ls -ls wrfinput_d01
+OK_step=$?
+
+if [ $OK_step -eq 0 ]; then
+    tail print.${COMPONENT}.txt
+else
+    echo ${COMPONENT} FAILED
+    exit 444
+fi

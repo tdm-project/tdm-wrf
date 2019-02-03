@@ -1,0 +1,25 @@
+ARG BASE_VERSION=latest
+FROM tdm/wrf-base:$BASE_VERSION
+LABEL maintainer="Gianluigi Zanetti <zag@crs4.it>"
+# Based on Jamie Wolff <jwolff@ucar.edu> and Michelle Harrold <harrold@ucar.edu>
+# wps_wrf_upp Dockerfile
+
+WORKDIR /wrf
+
+RUN true \ 
+ && export NETCDF=/wrf/netcdf_links \
+ && export JASPERINC=/usr/include/jasper/ \
+ && export JASPERLIB=/usr/lib64/ \
+ && cd /wrf/WRF \
+ && ./configure <<< $'32\r1\r' \
+ && /bin/csh ./compile em_real > compile_wrf_arw_opt32.1.log 2>&1 \
+ && curl -SL https://github.com/wrf-model/WPS/archive/v${WRF_VERSION}.tar.gz | tar zxC /wrf \
+ && cd /wrf && ln -s WPS-${WRF_VERSION} WPS && cd WPS \
+ && ./configure <<< $'1\r' \
+ && sed -i -e 's/-L$(NETCDF)\/lib/-L$(NETCDF)\/lib -lnetcdff /' ./configure.wps \
+ && /bin/csh ./compile > compile_wps.log 2>&1
+
+COPY run_geogrid run_ungrib run_metgrid /usr/bin/
+
+ENV LD_LIBRARY_PATH /usr/lib64/lib
+ENV PATH  /usr/lib64/bin:$PATH

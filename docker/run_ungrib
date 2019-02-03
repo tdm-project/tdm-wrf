@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -euo pipefail
+
+WPSRUN=$1
+
+cd ${WPSRUN}
+
+ln -sf /wrf/WPS/ungrib.exe .
+
+# Command for ungrib
+./ungrib.exe >& print.ungrib.txt
+ls -ls FILE:*
+OK_ungrib=$?
+
+if [ $OK_ungrib -eq 0 ]; then
+    tail print.ungrib.txt
+else
+    echo ungrib FAILED
+    exit 444
+fi

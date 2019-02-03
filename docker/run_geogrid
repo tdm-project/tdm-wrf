@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+
+WPSRUN=$1
+
+cd ${WPSRUN}
+ln -sf /wrf/WPS/geogrid.exe .
+# Command for geogrid
+./geogrid.exe >& print.geogrid.txt
+if [ ! -e geo_em.d01.nc ]; then
+    echo TROUBLES
+    echo geogrid did not complete
+    echo
+    cat geogrid.log
+    echo
+    exit 444
+fi

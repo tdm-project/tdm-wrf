@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -euo pipefail
+
+GEOG_NAME=$1
+WPSGEOG=$2
+GEOG_TGZ=${GEOG_NAME}.tar.gz
+UCAR_PATH="http://www2.mmm.ucar.edu/wrf/src/wps_files"
+GEOG_URL="${UCAR_PATH}/${GEOG_TGZ}"
+
+echo "Downloading ${GEOG_URL}"
+curl -SL ${GEOG_URL} | tar -xzC ${WPSGEOG}
+
+# fix a problem with nonstandard geog files
+cd ${WPSGEOG}
+dname=`ls ${WPSGEOG}`
+if [ x`echo $dname | wc -w` == x1 ]; then
+    mv ${dname}/* ${WPSGEOG}/
+    rm -rf ${dname}
+fi
+# add a semaphore file
+touch ${WPSGEOG}/.__success__
+
