@@ -15,6 +15,7 @@ global:
     # number)
     num_metgrid_levels: 32
     num_metgrid_soil_levels: 4
+    auto_levels_opt: 1
 
   running:
     input:

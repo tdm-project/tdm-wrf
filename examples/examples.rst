@@ -6,8 +6,27 @@ extracting boundary conditions from grib files -- are encapsulated in stateless
 docker containers.
 
 
-Fully parametrized example
---------------------------
+Each example is contained in a folder, e.g., `sardinia_lowres`. Inside the
+folder there are two subfolders: `scripts`, that is actually a simlink to
+`examples/scripts`; and `param` that contains what it is needed to define the
+example.
+
+Running an example is actually a two-macro-steps process. The first is to prepare
+boundary and initial conditions, the second to actually run the simulation.
+This is implemented as two scripts: `scripts/prepare_inputs.sh` and `scripts/run.sh`
+
+.. code-block:: bash
+
+  bash$ ./scripts/prepare_inputs.sh
+  ...
+  RUNID is run-2019-02-06_22-10-19
+  bash$ ./scripts/run.sh run-2019-02-06_22-10-19
+
+
+  
+   
+What happens in more detail
+---------------------------
 
 Run initialization
 ..................
@@ -15,7 +34,9 @@ Run initialization
 The expected operation sequence is the following. The script
 `scripts/prepare_input.sh` will do all the following data preparation steps.
 
- #. Prepare the run configuration file
+ #. Prepare the run configuration file, note that it expected that it will be
+    possible to recover appropriate global simulation boundary conditions from,
+    say, NOAA for the date requested.
 
     .. code-block:: bash
        $ cat param/run.cfg
@@ -171,98 +192,3 @@ Running a run
             --mount src=${RUNID},dst=/run\       
            crs4/tdm-wrf-arw:0.1 run_wrf /run ${NUMPROC} ${NUMTILES} /run/hosts
 
-
-
-           
-zag@pflip (ompi-param)$ ls -l ssh/root/
-total 12
--rw-r--r-- 1 zag zag  391 Jul 13 23:40 authorized_keys
--rw------- 1 zag zag 1679 Jul 13 20:15 id_rsa
--rw-r--r-- 1 zag zag  391 Jul 13 20:15 id_rsa.pub
-
-zag@pflip (ompi-param)$ docker run -p 2022:2022 -it --rm --mount type=bind,src=${PWD}/ssh,dst=/ssh-key crs4/tdm-wrf-arw:0.1 bash
-[root@3864c78302db wrf]# /start_sshd.sh
-
-
-
-minikube stop
-minikube delete
-minikube start
-minikube dashboard
-kubectl create clusterrolebinding serviceaccounts-cluster-admin   --clusterrole=cluster-admin   --group=system:serviceaccounts
-helm template chart --namespace $KUBE_NAMESPACE --name $MPI_CLUSTER_NAME -f values.yaml -f ssh-key.yaml | kubectl -n $KUBE_NAMESPACE create -f -
-
-
-running on minikube
--------------------
-
-
-
-
-running on aws
---------------
-
-
-Before you can use an EBS volume with a Pod, you need to create it.
-
-aws ec2 create-volume --availability-zone=eu-west-1a --size=10 --volume-type=g
-
-AWS EBS Example configuration
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-ebs
-spec:
-  containers:
-  - image: k8s.gcr.io/test-webserver
-    name: test-container
-    volumeMounts:
-    - mountPath: /test-ebs
-      name: test-volume
-  volumes:
-  - name: test-volume
-    # This AWS EBS volume must already exist.
-    awsElasticBlockStore:
-      volumeID: <volume-id>
-      fsType: ext4
-
-
-running on ostack
------------------
-
-cephfs
-
-A cephfs volume allows an existing CephFS volume to be mounted into your
-Pod. Unlike emptyDir, which is erased when a Pod is removed, the contents of a
-cephfs volume are preserved and the volume is merely unmounted. This means that
-a CephFS volume can be pre-populated with data, and that data can be “handed
-off” between Pods. CephFS can be mounted by multiple writers simultaneously.
-
-https://github.com/kubernetes/examples/tree/master/staging/volumes/cephfs/
-           
-Data analysis
--------------
-
-running on sardinia_hires
-
-docker run -it --rm --mount src=run-2018-07-12_09-21-53,dst=/run crs4/tdm-wrf-arw:0.1 run_wrf /run 8 4 /run/hosts ====> 10:23 -> 10:56
-
-|procs|tiles|time(min)|
-|-----|-----|---------|
-| 8   |  1  |      |
-| 8   |  4  |      |
-| 8   |  8  |      |
-| 4   |  8  |      |
-| 5   |  8  |      |
-| 10  |  4  |  29  |
-| 20  |  2  |  32  |
-| 40  |  1  |  24  |
-
-
-
-
-
-# docker run -i -t -p 8888:8888 crs4/tdm-wrf-analyze /bin/bash -c
-# "/opt/conda/bin/jupyter notebook --notebook-dir=/opt/notebooks --ip='*'
-#  --port=8888 --no-browser"

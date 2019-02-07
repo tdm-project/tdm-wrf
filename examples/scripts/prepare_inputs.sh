@@ -95,3 +95,5 @@ docker run --rm\
 docker run --rm\
        --mount src=${RUNID},dst=/run\
        tdm/wrf-wrf run_real /run
+
+echo "RUNID is ${RUNID}"
