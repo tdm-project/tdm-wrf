@@ -7,6 +7,7 @@ NPROCS=$2
 NCORES=$3
 HOSTS=$4
 
+
 RUN_DETAILS_FILES="
 aerosol.formatted aerosol_lat.formatted aerosol_lon.formatted aerosol_plev.formatted
 bulkdens.asc_s_0_03_0_9 bulkradii.asc_s_0_03_0_9
@@ -45,6 +46,15 @@ export PATH="/usr/lib64/openmpi/bin:$PATH"
 COMPONENT=wrf
 
 # start ssh
+/usr/bin/ssh-keygen -A
+echo ""| ssh-keygen -q -t rsa -N ''
+cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+cat > /root/.ssh/config <<EOF
+Host *
+StrictHostKeyChecking no
+EOF
+chmod 400 /root/.ssh/config 
+
 /usr/sbin/sshd
 
 cd ${RUNDIR}
@@ -56,6 +66,7 @@ done
 ln -sf /wrf/WRF/run/wrf.exe .
 
 export OMP_NUM_THREADS=${NCORES}
+
 time mpirun --allow-run-as-root -x OMP_NUM_THREADS \
      --hostfile ${HOSTS} -np ${NPROCS} \
      -v --display-map --mca btl self,tcp ./wrf.exe
