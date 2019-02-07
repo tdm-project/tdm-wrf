@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
 WPSRUN=$1
 
 COMPONENT=real
@@ -16,7 +14,7 @@ ls -ls wrfinput_d01
 OK_step=$?
 
 if [ $OK_step -eq 0 ]; then
-    tail print.${COMPONENT}.txt
+    tail -10 print.${COMPONENT}.txt
 else
     echo ${COMPONENT} FAILED
     exit 444
