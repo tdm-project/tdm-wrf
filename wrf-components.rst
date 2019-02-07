@@ -13,23 +13,23 @@ Our containerization of WRF is based on the following subdivision. See the WRF
 `User Manual`_.
 
  #. `tdm/wrf-base` starting from a centos image (ARG VERSION, default=latest)
-    install the compilation environment needed, downloads and unpack the
+    installs the compilation environment needed, downloads and unpack the
     required (ARG WRF_VERSION >= 4.0, default 4.0.3) version of WRF from
     github. Note that it does not compile WRF. The main purpose of this image is
-    to insure that a consistent version of WRF is used across this docker images
-    cluster.
+    to insure that a consistent version of WRF is used across the whole docker
+    images cluster.
 
  #. `tdm/wrf-wsp` starting from `tdm/wrf-base` (arg BASE_VERSION,
     default=latest) it downloads the WPS matching the WRF version contained in
-    `tdm/wrf-base` and compiles (serial version, as suggested by the manual)
-    first WRF and then WPS. All WPS related activities can be perfomed using
-    this container.
+    `tdm/wrf-base` and compiles, as suggested by the manual, first a serial
+    version of WRF and then WPS. All WPS related activities can be perfomed
+    using this container.
 
   #. `tdm/wrf-wrf` starting from `tdm/wrf-base` (arg BASE_VERSION,
     default=latest) it compiles WRF with (arg CMODE, default=32) and (arg NEST,
-    default=0)  CMODE=33 DMPAR, CMODE=34 SMPAR, CMODE=35 DMPAR + SMPAR
-    NEST=0 plain, NEST=1 nested, see the WRF `User Manual`_.
-
+    default=0) CMODE=32 serial, CMODE=33 DMPAR (Distributed Memory parall
+    (openmpi)), CMODE=34 SMPAR (shared memory OpenMP), CMODE=35 DMPAR + SMPAR,
+    NEST=0 plain, NEST=1 nested, see the WRF `User Manual`_. 
 
 
 Kubernetes
