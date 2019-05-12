@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+#apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: polystore-experiments
+  labels:
+    app: polystore-experiments
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.experiment.replicas }}
+  selector:
+    matchLabels:
+      app: polystore-experiments
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: polystore-experiments
+        release: {{ .Release.Name }}      
+    spec:
+      containers:
+      - name: hdfs-client
+        image: {{ .Values.image.name }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+          - name: HADOOP_CUSTOM_CONF_DIR
+            value: "/etc/hadoop-custom-conf"          
+        command: ['/bin/bash', '-l', '-c']
+        args:
+          - /entrypoint.sh python3 app.py -f {{ .Values.experiment.config_path }}/config.json start
+          #- /entrypoint.sh /usr/bin/tail -f /dev/null
+        volumeMounts:
+        - name: hdfs-config
+          mountPath: /etc/hadoop-custom-conf
+          readOnly: true
+        - name: polystore-experiments-config
+          mountPath: "{{ .Values.experiment.config_path }}"
+          readOnly: true
+        {{- if .Values.global.kerberosEnabled }}
+        - name: kerberos-config
+          mountPath: /etc/krb5.conf
+          subPath: {{ .Values.global.kerberosConfigFileName }}
+          readOnly: true
+        {{- end }}      
+      restartPolicy: Always      
+      volumes:
+      - name: hdfs-config
+        configMap:
+          name: {{ .Values.hdfs.configMap }}
+      - name: polystore-experiments-config
+        configMap:
+          name: polystore-experiments-configmap
+      {{- if .Values.global.kerberosEnabled }}
+      - name: kerberos-config
+        configMap:
+          name: {{ template "krb5-configmap" . }}
+      {{- end }}
+      
+      

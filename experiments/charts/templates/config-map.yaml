@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: polystore-experiments-configmap
+  labels:
+    app: polystore-experiments
+    chart: polystore-experiments
+    release: {{ .Release.Name }}
+data:
+  config.json: |-
+    {
+        "test_id": "{{ .Values.experiment.test_id }}",
+        "x_size": {{ .Values.experiment.x_size }},
+        "y_size": {{ .Values.experiment.y_size }},
+        "t_size": {{ .Values.experiment.t_size }},
+        "x_tile": {{ .Values.experiment.x_tile }},
+        "y_tile": {{ .Values.experiment.y_tile }},
+        "t_tile": {{ .Values.experiment.t_tile }},
+        "delta_t": {{ .Values.experiment.delta_t }},
+        "delta_t_sigma": {{ .Values.experiment.delta_t_sigma }},
+        "delta_t_factor": {{ .Values.experiment.delta_t_factor }},
+        "replicas": {{ .Values.experiment.replicas }},
+        "config_path": "{{ .Values.experiment.config_path }}",
+        "hdfs": {
+          "user": "{{ .Values.hdfs.user }}",
+          "base_dir": "{{ .Values.hdfs.base_dir }}",
+          "namenode_uri": "{{ .Values.hdfs.namenode_uri }}"
+        }        
+    }

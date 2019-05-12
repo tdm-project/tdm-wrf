@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Polystore experiment
+name: polystore-experiments
+version: 0.1.0
