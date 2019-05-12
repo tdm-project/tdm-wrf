@@ -65,7 +65,7 @@ def initialize_hdfs(configuration):
         'vfs.hdfs.name_node_uri': configuration['hdfs']['namenode_uri']})
     array_name = 'hdfs://' + \
         _os.path.join(configuration['hdfs']
-                      ['base_dir'], configuration['test_id'])
+                      ['base_dir'], configuration['id'])
 
     tdim = _tdb.Dim(ctx=ctx, name='time', domain=(
         0, configuration['t_size']), dtype=_np.int32, tile=configuration['t_tile'])
@@ -113,7 +113,7 @@ def start_writer(configuration):
         'vfs.hdfs.name_node_uri': configuration['hdfs']['namenode_uri']})
     array_name = 'hdfs://' + \
         _os.path.join(configuration['hdfs']
-                      ['base_dir'], configuration['test_id'])
+                      ['base_dir'], configuration['id'])
 
     xslice, yslice = find_region(get_replica_id(), configuration)
 

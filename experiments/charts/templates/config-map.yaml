@@ -9,7 +9,7 @@ metadata:
 data:
   config.json: |-
     {
-        "test_id": "{{ .Values.experiment.test_id }}",
+        "id": "{{ .Values.experiment.id }}",
         "x_size": {{ .Values.experiment.x_size }},
         "y_size": {{ .Values.experiment.y_size }},
         "t_size": {{ .Values.experiment.t_size }},

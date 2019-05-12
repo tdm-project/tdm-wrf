@@ -9,7 +9,7 @@ hdfs:
     configMap: "tailored-parrot-hdfs-config"
 
 experiment:
-  test_id: "test1"
+  id: "test1"
   x_size: 10000
   y_size: 10000
   t_size: 500
