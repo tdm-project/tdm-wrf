@@ -6,6 +6,7 @@ import socket as _socket
 import math
 import sys as _sys
 import numpy as _np
+from time import clock as _clock
 from time import sleep as _sleep
 import logging as _logging
 import argparse as _argparse
@@ -20,10 +21,17 @@ COMMANDS = ("initialize", "start")
 DEFAULT_CONFIG_FILENAME = "/etc/experiments/config.json"
 HDFS_SITE_XML = "hdfs-site.xml"
 
+class Timer:    
+    def __enter__(self):
+        self.start = _clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = _clock()
+        self.interval = self.end - self.start
+
 # load hdfs configuration
 # we assume the HADOOP_CONF_DIR is set
-
-
 def load_hdfs_configutarion(configuration):
     # TODO: fix static HDFS configuration
     # conf_dir = _os.environ["HADOOP_CONF_DIR"]
@@ -47,18 +55,20 @@ def load_configuration(filename):
         return configuration
 
 
-def wait_for_array(array_name):    
+def wait_for_array(array_name):
     try:
         _logger.info("Checking if array '%s' exists", array_name)
-        while not _tdb.object_type(array_name):        
+        while not _tdb.object_type(array_name):
             _logger.debug("Array '%s' not initialized", array_name)
-            _sleep(2)            
+            _sleep(2)
     except Exception as e:
         _logger.error(e)
         if _logger.isEnabledFor(_logging.DEBUG):
             _logger.exception(e)
-        
+
 # initialize HDFS
+
+
 def initialize_hdfs(configuration):
     ctx = _tdb.Ctx({
         'vfs.hdfs.username': configuration['hdfs']['user'],
@@ -102,8 +112,19 @@ def find_region(replica_id, configuration):
 
 
 def get_replica_id():
-    h = _socket.gethostname()
-    return int(h.split("-")[2])
+    replica_id = 0
+    tokens = _socket.gethostname().split("-")
+    _logger.debug("Extracting replica ID...")
+    try:
+        _logger.debug("Hostname tokens: %r", tokens)
+        replica_id = 0 if len(tokens) <= 1 else int(tokens[2])
+    except:
+        _logger.debug(
+            "Last part of the hostname (i.e., '%s') is not an integer! Using default value: 0", tokens[2])
+        replica_id = 0
+    _logger.debug("Replica ID: %d", replica_id)
+    _logger.debug("Extracting replica ID: done!")
+    return replica_id
 
 
 def start_writer(configuration):
@@ -126,12 +147,16 @@ def start_writer(configuration):
         if configuration["delta_t"] > 0:
             _sleep(_np.random.normal(
                 configuration["delta_t"], configuration["delta_t"]*configuration["delta_t_factor"]))
-            _logger.info("Mi sono svegliato al passo: %d!!!", i)
-        data[:, :] = i * random_number
-        with _tdb.DenseArray(ctx=ctx, uri=array_name, mode='w') as A:
+            _logger.info("Exited from sleep @ step %d!!!", i)
+        _logger.debug("Preparing data...")
+        with Timer() as t:
+            data[:, :] = i * random_number
+        _logger.debug("Prepared data in %.03f sec.!", t.interval)
+        with _tdb.DenseArray(ctx=ctx, uri=array_name, mode='w') as A:            
             try:
-                A[i:(i+1), xslice, yslice] = data
-                _logger.info("Ho scritto al passo %d!!!", i)
+                with Timer() as t:
+                    A[i:(i+1), xslice, yslice] = data                
+                _logger.info("Tile of %d bytes written @ step %d in %.03f sec.", data.nbytes, i, t.interval)
             except Exception as e:
                 _logger.error(e)
                 if _logger.isEnabledFor(_logging.DEBUG):
