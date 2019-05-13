@@ -11,11 +11,12 @@ spec:
     image: {{ .Values.image.name }}
     imagePullPolicy: {{ .Values.image.pullPolicy }}
     env:
-      - name: HADOOP_CUSTOM_CONF_DIR
-        value: "/etc/hadoop-custom-conf"          
+    - name: HADOOP_CUSTOM_CONF_DIR
+      value: "/etc/hadoop-custom-conf"
     command: ['/bin/bash', '-l', '-c']
     args:
-       - /entrypoint.sh init.sh /init.sh {{ .Values.hdfs.base_dir }} {{ .Values.experiment.config_path }}
+      - /entrypoint.sh ./init.sh {{ .Values.hdfs.base_dir }} {{ .Values.experiment.config_path }}/config.json
+      #- /entrypoint.sh /usr/bin/tail -f /dev/null
     volumeMounts:
     - name: hdfs-config
       mountPath: /etc/hadoop-custom-conf
