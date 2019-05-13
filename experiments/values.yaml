@@ -16,11 +16,12 @@ experiment:
   x_tile: 2000
   y_tile: 2000
   t_tile: 1
-  delta_t: 0
+  delta_t: 1
   delta_t_sigma: 0.05  
   delta_t_factor: 0.05
-  replicas: 1
+  replicas: 16
   config_path: "/etc/polystore-experiment"
   
 global:
   kerberosEnabled: false
+  nodeRole: 
