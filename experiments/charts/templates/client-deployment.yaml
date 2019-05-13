@@ -1,6 +1,6 @@
 apiVersion: apps/v1
 #apiVersion: extensions/v1beta1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: polystore-experiments
   labels:
@@ -27,7 +27,7 @@ spec:
             value: "/etc/hadoop-custom-conf"          
         command: ['/bin/bash', '-l', '-c']
         args:
-          - /entrypoint.sh python3 app.py -f {{ .Values.experiment.config_path }}/config.json start
+          - /entrypoint.sh python3 app.py --debug -f {{ .Values.experiment.config_path }}/config.json start
           #- /entrypoint.sh /usr/bin/tail -f /dev/null
         volumeMounts:
         - name: hdfs-config
