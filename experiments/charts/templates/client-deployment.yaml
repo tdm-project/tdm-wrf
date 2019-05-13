@@ -55,5 +55,6 @@ spec:
         configMap:
           name: {{ template "krb5-configmap" . }}
       {{- end }}
-      
+      nodeSelector:
+        node-role.kubernetes.io/node: {{ .Values.global.nodeRole }}
       
