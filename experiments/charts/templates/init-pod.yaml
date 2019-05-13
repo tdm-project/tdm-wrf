@@ -2,9 +2,10 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: polystore-experiments-init
+  namespace: "{{ .Release.Namespace }}"
   labels:
     app: polystore-experiments
-    release: {{ .Release.Name }}
+    release: {{ .Release.Name }}    
 spec:
   containers:
   - name: polystore-experiments-init

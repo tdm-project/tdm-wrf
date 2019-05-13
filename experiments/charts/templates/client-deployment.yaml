@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: polystore-experiments
+  namespace: "{{ .Release.Namespace }}"
   labels:
     app: polystore-experiments
     release: {{ .Release.Name }}
