@@ -4,7 +4,7 @@ set +x
 
 experiment_name="${1:-polystore-experiment}"
 
-sed -ie  's/id:.*/id: '${experiment_name}'/' values.yaml
+sed -ie  's/id:.*/id: "'${experiment_name}'"/' values.yaml
 
 MyDir=$(cd `dirname $0` && pwd)
 helm repo update
