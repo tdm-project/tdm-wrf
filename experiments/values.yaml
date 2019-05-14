@@ -9,19 +9,19 @@ hdfs:
     configMap: "tailored-parrot-hdfs-config"
 
 experiment:
-  id: "test1"
-  x_size: 10000
-  y_size: 10000
+  id: "test36"
+  x_size: 20000
+  y_size: 20000
   t_size: 500
-  x_tile: 2000
-  y_tile: 2000
+  x_tile: 4000
+  y_tile: 4000
   t_tile: 1
   delta_t: 1
   delta_t_sigma: 0.05  
   delta_t_factor: 0.05
-  replicas: 16
+  replicas: 36
   config_path: "/etc/polystore-experiment"
   
 global:
   kerberosEnabled: false
-  nodeRole: 
+  nodeRole: transient-computational-node
