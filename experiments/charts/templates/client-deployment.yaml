@@ -56,6 +56,13 @@ spec:
         configMap:
           name: {{ template "krb5-configmap" . }}
       {{- end }}
+      # select nodes
       nodeSelector:
         node-role.kubernetes.io/node: {{ .Values.global.nodeRole }}
-      
+      # we assume the following taint on transient-computation-nodes
+      # kubectl taint nodes <NODE-NAME> transient-computational-node=true:NoSchedule
+      tolerations:
+      - key: "{{ .Values.global.nodeRole }}"
+        operator: Equal
+        effect: "NoSchedule"
+        value: "true"
