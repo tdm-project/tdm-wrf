@@ -43,7 +43,7 @@ spec:
           subPath: {{ .Values.global.kerberosConfigFileName }}
           readOnly: true
         {{- end }}      
-      restartPolicy: Always      
+      restartPolicy: OnFailure      
       volumes:
       - name: hdfs-config
         configMap:
