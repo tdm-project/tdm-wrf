@@ -13,7 +13,7 @@ docker build --build-arg BASE_VERSION=${BASE_VERSION} \
 
 # We enable both dmpar and smpar and nesting
 docker build --build-arg BASE_VERSION=${BASE_VERSION} \
-             -f docker/Dockerfile.wrf-wrf      \                    
+             -f docker/Dockerfile.wrf-wrf      \
              --build-arg CMODE=35 --build-arg NEST=1 \
              -t tdm/wrf-wrf:${BASE_VERSION} docker
 
