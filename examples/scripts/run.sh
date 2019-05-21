@@ -38,4 +38,4 @@ docker run --rm\
 
 docker run -it --rm\
        --mount src=${RUNID},dst=/run\
-       tdm/wrf-wrf run_wrf /run ${NUMPROC} ${NUMTILES} /run/hosts
+       tdmproject/wrf-wrf run_wrf /run ${NUMPROC} ${NUMTILES} /run/hosts

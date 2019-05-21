@@ -16,7 +16,7 @@ source ./param/run.cfg
 
 if check_if_not_present ${GEOG_NAME} ; then 
     docker run --rm --mount source=${GEOG_NAME},destination=/geo \
-           tdm/wrf-populate ${GEOG_NAME} /geo
+           tdmproject/wrf-populate ${GEOG_NAME} /geo
 fi
 
 
@@ -57,7 +57,7 @@ docker run --rm\
 docker run --rm\
        --mount src=${GEOG_NAME},dst=/geo\
        --mount src=${RUNID},dst=/run\
-       tdm/wrf-wps run_geogrid /run
+       tdmproject/wrf-wps run_geogrid /run
 
 
 docker run --rm\
@@ -70,13 +70,13 @@ docker run --rm\
        --mount src=${GEOG_NAME},dst=/geo\
        --mount src=${NOAADATA},dst=/gfs\
        --mount src=${RUNID},dst=/run\
-       tdm/wrf-wps run_ungrib /run
+       tdmproject/wrf-wps run_ungrib /run
 
 docker run --rm\
        --mount src=${GEOG_NAME},dst=/geo\
        --mount src=${NOAADATA},dst=/gfs\
        --mount src=${RUNID},dst=/run\
-       tdm/wrf-wps run_metgrid /run
+       tdmproject/wrf-wps run_metgrid /run
 
 docker run --rm\
        --mount src=${RUNID},dst=/run\
@@ -94,6 +94,6 @@ docker run --rm\
 
 docker run --rm\
        --mount src=${RUNID},dst=/run\
-       tdm/wrf-wrf run_real /run
+       tdmproject/wrf-wrf run_real /run
 
 echo "RUNID is ${RUNID}"
