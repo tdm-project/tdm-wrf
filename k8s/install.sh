@@ -13,7 +13,7 @@ cd resources
 kubectl create namespace ${KUBE_NAMESPACE}
 
 # create ClusterRoleBinding
-kubectl apply -f cluster-role-biding.yaml
+kubectl apply -f cluster-role-binding.yaml
 
 # create the volume claim
 kubectl apply -f kube-openmpi-run-data-claim.yaml
