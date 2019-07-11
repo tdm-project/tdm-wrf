@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-assets
+  labels:
+    app: {{ template "..name" . }}
+    chart: {{ template "..chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  gen_hostfile.sh: |
+    set -xev
+
+    target=$1
+    max_try=$2
+
+    trap "rm -f ${target}_new" EXIT TERM INT KILL
+
+    cluster_size=$(kubectl -n {{ .Release.Namespace }} get statefulsets {{ .Release.Name }}-worker -o jsonpath='{.status.replicas}')
+
+    tried=0
+    until [ "$(wc -l < ${target}_new)" -eq $cluster_size ]; do
+      pod_names=$(kubectl -n {{ .Release.Namespace }} get pod \
+        --selector=app={{ template "..name" . }},chart={{ template "..chart" . }},release={{ .Release.Name }},role=worker \
+        --field-selector=status.phase=Running \
+        -o=jsonpath='{.items[*].metadata.name}')
+
+      rm -f ${target}_new
+      for p in ${pod_names}; do
+        echo "${p}.{{ .Release.Name }}" >> ${target}_new
+      done
+
+      tried=$(expr $tried + 1)
+      if [ -n "$max_try" ] && [ $max_try -ge $tried ]; then
+        break
+      fi
+    done
+
+    sed -i "1i{{ .Release.Name }}-master.{{ .Release.Name }}" ${target}_new
+
+    if [ -e ${target}_new ]; then
+      mv ${target}_new ${target}
+    fi
+
+{{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
+  hostfile_update_every: {{.Values.mpiMaster.autoUpdateHostfile.updateEvery | default "15" | quote }}
+{{ end }}
