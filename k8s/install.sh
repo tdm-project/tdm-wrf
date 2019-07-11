@@ -26,7 +26,7 @@ helm template chart \
      -f ssh-key.yaml | kubectl -n ${KUBE_NAMESPACE} apply -f -
 
 # wait until $MPI_CLUSTER_NAME-master is ready
-until kubectl get -n ${KUBE_NAMESPACE} po ${MPI_CLUSTER_NAME}-master ;
+until kubectl get -n ${KUBE_NAMESPACE} po ${MPI_CLUSTER_NAME}-master | grep Running ;
 do
     date; sleep 1; echo "";
 done
