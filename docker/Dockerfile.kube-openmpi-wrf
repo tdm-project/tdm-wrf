@@ -1,0 +1,61 @@
+#
+# This is simply the base centos system and the WRF source
+#
+# Based on the  wps_wrf_upp Dockerfile
+# by Jamie Wolff <jwolff@ucar.edu> adn Michelle Harrold <harrold@ucar.edu>
+
+ARG CENTOS_OPENMPI_BASE_IMAGE
+FROM ${CENTOS_OPENMPI_BASE_IMAGE}
+
+ARG WRF_VERSION
+ENV WRF_VERSION ${WRF_VERSION:-4.0.3}
+
+WORKDIR /wrf
+
+RUN yum -y update \
+    && yum -y install \
+            file \
+            yum-utils \
+            gcc gcc-gfortran gcc-c++ glibc.i686 libgcc.i686 \
+            libpng-devel jasper jasper-devel ksh hostname m4 make perl tar tcsh time \
+            wget which zlib zlib-devel epel-release \
+            netcdf-devel.x86_64 netcdf-fortran-devel.x86_64 \
+            netcdf-fortran.x86_64 hdf5.x86_64 \
+    && yum clean all \
+    && rm -rf /var/cache/yum \
+    && rm -rf /var/tmp/yum-* \
+    && curl -SL https://github.com/wrf-model/WRF/archive/v${WRF_VERSION}.tar.gz | tar  xzC /wrf \
+    && cd /wrf && ln -s WRF-${WRF_VERSION} WRF \
+    && mkdir netcdf_links \
+    && ln -sf /usr/include/ netcdf_links/include \
+    && ln -sf /usr/lib64 netcdf_links/lib \
+    && ln -sf /usr/lib64/gfortran/modules/netcdf.mod netcdf_links/include \
+    && mkdir /WPSRUN
+
+# GNU (gfortran/gcc) options
+# CMODE=32 serial, CMODE=33 DMPAR,  CMODE=34 SMPAR, CMODE=35 DMPAR + SMPAR
+# NEST=0 plain, NEST=1 nested, ...
+ARG CMODE
+ARG NEST
+
+ENV CMODE ${CMODE:-32}
+ENV NEST  ${NEST:-0}
+
+WORKDIR /wrf
+
+RUN true \ 
+   && export LD_LIBRARY_PATH="/usr/lib64/openmpi/lib:${LD_LIBRARY_PATH}" \
+   && export PATH="/usr/lib64/openmpi/bin:${PATH}" \
+   && export NETCDF=/wrf/netcdf_links \
+   && export JASPERINC=/usr/include/jasper/ \
+   && export JASPERLIB=/usr/lib64/ \
+   && cd ./WRF \
+   && printf "${CMODE}\n${NEST}" |./configure \
+   && sed -i -e '/^DM_CC/ s/$/ -DMPI2_SUPPORT/' ./configure.wrf \
+   && /bin/csh ./compile em_real > compile_wrf_opt${CMODE}.${NEST}.log 2>&1
+
+# TODO: probably we need a run helper to simplify the list of arguments
+#COPY run-wrf run_real /usr/bin/
+
+
+
