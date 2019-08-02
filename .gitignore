@@ -1,2 +1,6 @@
 .idea
 .DS_Store
+venv
+**/tests/data
+**/.ssh/
+k8s/resources/ssh-key.yaml
