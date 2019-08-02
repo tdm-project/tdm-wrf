@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-simulation-config
+  labels:
+    app: {{ template "..name" . }}
+    chart: {{ template "..chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  config.json: |-
+    {
+        "run_id": "{{ .Values.simulation.run_id }}",
+        "data": "{{ .Values.simulation.data }}",
+        "results": "{{ .Values.simulation.results }}",
+        "variables": ["{{ .Values.simulation.variables }}"],
+        "attributes": ["{{ .Values.simulation.attributes }}"],
+        "processes": "{{ .Values.simulation.replicas }}",
+        "processes_per_node": "{{ .Values.simulation.processes_per_node }}",
+        "persistence": {
+          "base_dir": "{{ .Values.persistence.base_dir }}",
+          "logs_dir": "{{ .Values.persistence.logs_dir }}",
+          "hdfs": {
+            "user": "{{ .Values.persistence.hdfs.user }}",
+            "namenode_uri": "{{ .Values.persistence.hdfs.namenode_uri }}"
+          }
+        }
+    }
