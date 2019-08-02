@@ -27,7 +27,7 @@ _logger = _logging.getLogger(__name__)
 _formatter = _logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 
 # defaults
-COMMANDS = ("start")
+COMMANDS = ("start", "wait")
 DEFAULT_CONFIG_FILENAME = "/etc/wrf-writer/config.json"
 HDFS_SITE_XML = "hdfs-site.xml"
 
@@ -588,7 +588,7 @@ class Writer(object):
         _logger.debug("Is the first datafile: %s", self.datafile.is_first_data_file())
         if self.datafile.is_first_data_file():
             #
-            # self.initialize_arrays()
+            self.initialize_arrays()
             # store global attributes
             self.write_global_attributes()
 
@@ -786,13 +786,17 @@ class WriterManager(object):
             _time.sleep(5)
         # _logger.debug('Stopped writers!!!')
 
-    def get_writers_logs_checkpoints(self):
-        checkpoints = []
+    def check_writers_completion(self):
+        _logger.debug("Checking checkpoints...")
         checkpoint_files = [_os.path.join(p, _CHECKPOINT_FILENAME) for p in _os.listdir(self.base_logs_dir) if
                             _os.path.isdir(p)]
         for f in checkpoint_files:
             with open(f) as fp:
-                checkpoints.append(_json.load())
+                checkpoint = _json.load(fp)
+                if checkpoint and not checkpoint[_CHECKPOINT_COMPLETION]:
+                    _logger.debug("Completion on '%s': False", f)
+                    return False
+        return True
 
     def wait_for_finish(self):
         """
@@ -809,7 +813,8 @@ class WriterManager(object):
             _time.sleep(5)
         _logger.info("Simulation has finished!")
         # detect writers checkpoints
-        # writers
+        while not self.check_writers_completion():
+            _time.sleep(5)
 
 
 def _make_parser():
@@ -849,10 +854,13 @@ def main():
 
         # load wrf configuration
         simulation = Simulation(options.file)
-
-        if options.cmd == "start":  # COMMANDS[0]:
+        # launch user command
+        if options.cmd == COMMANDS[0]:
             mgt = WriterManager(simulation)
             mgt.start_writers(options.multiprocessing)
+        elif options.cmd == COMMANDS[1]:
+            mgt = WriterManager(simulation)
+            mgt.wait_for_finish()
         else:
             _logger.error("Unsupported command ", options.cmd)
 
