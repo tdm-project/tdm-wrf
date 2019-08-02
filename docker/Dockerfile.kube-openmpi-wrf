@@ -54,8 +54,8 @@ RUN true \
    && sed -i -e '/^DM_CC/ s/$/ -DMPI2_SUPPORT/' ./configure.wrf \
    && /bin/csh ./compile em_real > compile_wrf_opt${CMODE}.${NEST}.log 2>&1
 
-# TODO: probably we need a run helper to simplify the list of arguments
-#COPY run-wrf run_real /usr/bin/
+COPY run-wrf.sh /usr/local/bin/run-wrf
+RUN chmod +x /usr/local/bin/run-wrf
 
 
 
