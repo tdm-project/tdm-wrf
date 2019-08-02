@@ -1,9 +1,38 @@
-image:
+simulation:
+  run_id: "run01"
+  data: "/run_data/run01"
+  results: "/run_results"
+  variables: 'P'
+  attributes: ''
+  processes: 1
+  processes_per_node: 1
+  config: "/simulation-config"
+
+
+persistence:
+  log_level: INFO
+  base_dir: "hdfs:///wrf-experiments"
+  logs_dir: "/run_data/run01/writers_logs"
+  hdfs:
+    user: "root"
+    namenode_uri: "hdfs://172.30.10.95:30820"
+    configMap: "tailored-parrot-hdfs-config"
+    x_tile: 1
+    y_tile: 1
+    z_tile: 1
+
+
+mpiImage:
   repository: kikkomep/kube-openmpi
   tag: wrf_4.0.3-1.10.7-centos7-0.7.0
   pullPolicy: Always
   # pullSecrets:
   # - name: ""
+
+mpiDataWriterImage:
+  repository: kikkomep/kube-openmpi
+  tag: wrf_writer_3.2.0-ubuntu-1.6.0-0.4.3
+  pullPolicy: Always
 
 run:
   id: run01
@@ -23,11 +52,11 @@ sshGateway:
 mpiMaster:
   autoUpdateHostfile:
     enabled: true
-  # securityContext:
-  #   runAsUser: 1000
-  #   fsGroup: 1000
-  # oneShot:
-  # If oneShot.enabled=true, mater automatically runs oneShot.command and complete self.
+    # securityContext:
+    #   runAsUser: 1000
+    #   fsGroup: 1000
+    # oneShot:
+    # If oneShot.enabled=true, mater automatically runs oneShot.command and complete self.
     # enabled: true
     # # This will scale workers down to 0 when command completed successfully.
     # autoScaleDownWorkers: true
@@ -37,12 +66,12 @@ mpiMaster:
     #     --display-map -n 4 -npernode 1 \
     #     sh -c 'echo $(hostname):hello'
   resources:
-    # limits:
-    #  cpu: 100m
-    #  memory: 128Mi
-    # requests:
-    #  cpu: 100m
-    #  memory: 128Mi
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -64,14 +93,14 @@ mpiWorkers:
   #   podDisruptionBudget:
   #     enabled: true
   resources:
-    # limits:
-    #  cpu: 100m
-    #  memory: 128Mi
-    #  gpu: 1
-    # requests:
-    #  cpu: 100m
-    #  memory: 128Mi
-    #  gpu: 1
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  #  gpu: 1
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+  #  gpu: 1
   nodeSelector: {}
   tolerations: []
   affinity: {}
