@@ -13,7 +13,7 @@ spec:
       heritage: {{ .Release.Service }}
       role: worker
 ---
-{{ end }}
+        {{ end }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -44,111 +44,194 @@ spec:
         heritage: {{ .Release.Service }}
         role: worker
     spec:
-{{- if .Values.mpiWorkers.customScheduling.enabled }}
+            {{- if .Values.mpiWorkers.customScheduling.enabled }}
       schedulerName: {{.Values.mpiWorkers.customScheduling.schedulerName}}
-{{- end }}
+            {{- end }}
       securityContext:
-{{ toYaml .Values.mpiWorkers.securityContext | indent 8 }}
-{{- if .Values.image.pullSecrets }}
+            {{ toYaml .Values.mpiWorkers.securityContext | indent 8 }}
+            {{- if .Values.mpiImage.pullSecrets }}
       imagePullSecrets:
-{{ toYaml .Values.image.pullSecrets | indent 6 }}
-{{- end }}
+            {{ toYaml .Values.mpiImage.pullSecrets | indent 6 }}
+            {{- end }}
       volumes:
-      - name: kube-openmpi-run-data
-        persistentVolumeClaim:
-          claimName: kube-openmpi-run-data-claim
-      - name: kube-openmpi-ssh-key
-        secret:
-          secretName: {{ .Release.Name }}-ssh-key
-          defaultMode: 256
-      - name: kube-openmpi-utils
-        configMap:
-          name: {{ .Release.Name }}-assets
-          items:
-          - key: gen_hostfile.sh
-            path: gen_hostfile.sh
-            mode: 365
-      {{- range .Values.appCodesToSync }}
-      - name: kube-openmpi-sync-{{ .name }}
-        emptyDir: {}
-        {{- if .gitSecretName }}
-      - name: kube-openmpi-sync-{{ .name }}-secret
-        secret:
-          secretName: {{ .gitSecretName }}
-          defaultMode: 256
-        {{- end }}
-      {{- end }}
-{{ if .Values.mpiWorkers.volumes }}
-{{ toYaml .Values.mpiWorkers.volumes | indent  6 }}
-{{ end }}
-      initContainers:
-      {{- $root := . -}}
-      {{- range .Values.appCodesToSync }}
-      - name: {{ .name }}-fetch
-        image: {{ $root.Values.gitSyncImage.repository }}:{{ $root.Values.gitSyncImage.tag }}
-        imagePullPolicy: {{ $root.Values.gitSyncImage.pullPolicy }}
-        env:
-        - name: GIT_SYNC_REPO
-          value: {{ .gitRepo }}
-        - name: GIT_SYNC_BRANCH
-          value: {{ .gitBranch }}
-        - name: GIT_SYNC_DEST
-          value: {{ .name }}
-        - name: GIT_SYNC_ONE_TIME
-          value: "true"
-        - name: GIT_SYNC_WAIT
-          value: {{ .fetchWaitSecond | default "0" | quote }}
-        {{- if .gitSecretName }}
-        - name: GIT_SYNC_SSH
-          value: "true"
-        - name: GIT_KNOWN_HOSTS
-          value: "false"
-        {{- end }}
-        volumeMounts:
-        - name: kube-openmpi-sync-{{ .name }}
-          mountPath: /git
-        {{- if .gitSecretName }}
-        - name: kube-openmpi-sync-{{ .name }}-secret
-          mountPath: /etc/git-secret
-        securityContext:
-          runAsUser: 0
-        {{- end }}
-      {{- end }}
-      containers:
-      - name: mpi-worker
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        ports:
-        - containerPort: 2022
-        volumeMounts:
+        - name: simulation-config
+          configMap:
+            name: {{ .Release.Name }}-simulation-config
         - name: kube-openmpi-run-data
-          mountPath: "/run_data"
+          persistentVolumeClaim:
+            claimName: kube-openmpi-run-data-claim
+        - name: kube-openmpi-results-dir
+          emptyDir: {}
         - name: kube-openmpi-ssh-key
-          mountPath: /ssh-key/openmpi
+          secret:
+            secretName: {{ .Release.Name }}-ssh-key
+            defaultMode: 256
         - name: kube-openmpi-utils
-          mountPath: /kube-openmpi/utils
-        {{- range .Values.appCodesToSync }}
+          configMap:
+            name: {{ .Release.Name }}-assets
+            items:
+              - key: gen_hostfile.sh
+                path: gen_hostfile.sh
+                mode: 365
+        - name: hdfs-config
+          configMap:
+            name: {{ .Values.persistence.hdfs.configMap }}
+              {{- range .Values.appCodesToSync }}
         - name: kube-openmpi-sync-{{ .name }}
-          mountPath: {{ .mountPath }}
-          {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-        {{- end }}
-{{ if .Values.mpiWorkers.volumeMounts }}
-{{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
-{{ end }}
-        resources:
-{{ toYaml .Values.mpiWorkers.resources | indent 10 }}
-      {{- with .Values.mpiWorkers.nodeSelector }}
+          emptyDir: {}
+              {{- if .gitSecretName }}
+        - name: kube-openmpi-sync-{{ .name }}-secret
+          secret:
+            secretName: {{ .gitSecretName }}
+            defaultMode: 256
+            {{- end }}
+            {{- end }}
+            {{ if .Values.mpiWorkers.volumes }}
+            {{ toYaml .Values.mpiWorkers.volumes | indent  6 }}
+            {{ end }}
+      initContainers:
+              {{- $root := . -}}
+              {{- range .Values.appCodesToSync }}
+        - name: {{ .name }}-fetch
+          image: {{ $root.Values.gitSyncImage.repository }}:{{ $root.Values.gitSyncImage.tag }}
+          imagePullPolicy: {{ $root.Values.gitSyncImage.pullPolicy }}
+          env:
+            - name: GIT_SYNC_REPO
+              value: {{ .gitRepo }}
+            - name: GIT_SYNC_BRANCH
+              value: {{ .gitBranch }}
+            - name: GIT_SYNC_DEST
+              value: {{ .name }}
+            - name: GIT_SYNC_ONE_TIME
+              value: "true"
+            - name: GIT_SYNC_WAIT
+              value: {{ .fetchWaitSecond | default "0" | quote }}
+            - name: RUN_DATA
+              value: {{ .Values.simulation.data }}
+            - name: RUN_RESULTS
+              value: {{ .Values.simulation.results }}
+                  {{- if .gitSecretName }}
+            - name: GIT_SYNC_SSH
+              value: "true"
+            - name: GIT_KNOWN_HOSTS
+              value: "false"
+                {{- end }}
+          volumeMounts:
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: /git
+                  {{- if .gitSecretName }}
+            - name: kube-openmpi-sync-{{ .name }}-secret
+              mountPath: /etc/git-secret
+          securityContext:
+            runAsUser: 0
+            {{- end }}
+            {{- end }}
+        - name: mpi-worker-cleaner
+          image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
+          imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+          command: ['/bin/sh', '-c']
+          args:
+            - rm -Rf ${RUN_RESULTS}/* ${RUN_LOGS}/${HOSTNAME} ${RUN_DATA}/rsl.*
+          env:
+            - name: RUN_DATA
+              value: {{ .Values.simulation.data }}
+            - name: RUN_RESULTS
+              value: {{ .Values.simulation.results }}
+            - name: RUN_LOGS
+              value: {{ .Values.persistence.logs_dir }}
+          volumeMounts:
+            - name: simulation-config
+              mountPath: {{ .Values.simulation.config }}
+            - name: kube-openmpi-run-data
+              mountPath: {{ .Values.simulation.data }}
+            - name: kube-openmpi-results-dir
+              mountPath: {{ .Values.simulation.results }}
+      containers:
+        - name: mpi-worker
+          image: "{{ .Values.mpiImage.repository }}:{{ .Values.mpiImage.tag }}"
+          imagePullPolicy: {{ .Values.mpiImage.pullPolicy }}
+          ports:
+            - containerPort: 2022
+          env:
+            - name: SIMULATION_CONFIG
+              value: {{ .Values.simulation.config }}
+            - name: RUN_LOGS
+              value: {{ .Values.persistence.logs_dir }}
+          volumeMounts:
+            - name: simulation-config
+              mountPath: {{ .Values.simulation.config }}
+            - name: kube-openmpi-run-data
+              mountPath: {{ .Values.simulation.data }}
+            - name: kube-openmpi-results-dir
+              mountPath: {{ .Values.simulation.results }}
+            - name: kube-openmpi-ssh-key
+              mountPath: /ssh-key/openmpi
+            - name: kube-openmpi-utils
+              mountPath: /kube-openmpi/utils
+                  {{- range .Values.appCodesToSync }}
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: {{ .mountPath }}
+              {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+                {{- end }}
+                {{ if .Values.mpiWorkers.volumeMounts }}
+                {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+                {{ end }}
+          resources:
+              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}
+        - name: mpi-worker-data-writer
+          image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+          imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
+          env:
+            - name: HADOOP_CUSTOM_CONF_DIR
+              value: "/etc/hadoop-custom-conf"
+            - name: SIMULATION_CONFIG
+              value: {{ .Values.simulation.config }}
+            - name: RUN_LOGS
+              value: {{ .Values.persistence.logs_dir }}
+          command: ['/bin/bash', '-l', '-c']
+          args:
+            #- /entrypoint.sh python3 writer.py --debug -m -f {{ .Values.simulation.config }}/config.json start
+            #- /entrypoint.sh /usr/bin/tail -f /dev/null
+            - /entrypoint.sh python3 $(which writer.py) -m --debug -f {{ .Values.simulation.config }}/config.json start
+            #- /entrypoint.sh cat /etc/hosts
+          ports:
+            - containerPort: 2022
+          volumeMounts:
+            - name: simulation-config
+              mountPath: {{ .Values.simulation.config }}
+            - name: kube-openmpi-run-data
+              mountPath: {{ .Values.simulation.data }}
+            - name: kube-openmpi-results-dir
+              mountPath: {{ .Values.simulation.results }}
+            - name: kube-openmpi-ssh-key
+              mountPath: /ssh-key/openmpi
+            - name: hdfs-config
+              mountPath: /etc/hadoop-custom-conf
+              readOnly: true
+            - name: kube-openmpi-utils
+              mountPath: /kube-openmpi/utils
+                  {{- range .Values.appCodesToSync }}
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: {{ .mountPath }}
+              {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+                {{- end }}
+                {{ if .Values.mpiWorkers.volumeMounts }}
+                {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+                {{ end }}
+          resources:
+            {{ toYaml .Values.mpiWorkers.resources | indent 10 }}
+            {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- with .Values.mpiWorkers.tolerations }}
+            {{ toYaml . | indent 8 }}
+            {{- end }}
+            {{- with .Values.mpiWorkers.tolerations }}
       tolerations:
-{{ toYaml . | indent 8 }}
-      {{- end }}
-      {{- with .Values.mpiWorkers.affinity }}
+            {{ toYaml . | indent 8 }}
+            {{- end }}
+            {{- with .Values.mpiWorkers.affinity }}
       affinity:
-{{ toYaml . | indent 8 }}
-      {{- end }}
+            {{ toYaml . | indent 8 }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Pod
@@ -165,213 +248,292 @@ spec:
   restartPolicy: OnFailure
   hostname: {{ .Release.Name }}-master
   subdomain: {{ .Release.Name }}
-{{- if .Values.mpiMaster.customScheduling.enabled }}
+        {{- if .Values.mpiMaster.customScheduling.enabled }}
   schedulerName: {{.Values.mpiMaster.customScheduling.schedulerName}}
-{{- end }}
+        {{- end }}
   securityContext:
-{{ toYaml .Values.mpiMaster.securityContext | indent 8 }}
-{{- if .Values.image.pullSecrets }}
+        {{ toYaml .Values.mpiMaster.securityContext | indent 8 }}
+        {{- if .Values.mpiImage.pullSecrets }}
   imagePullSecrets:
-{{ toYaml .Values.image.pullSecrets | indent 2 }}
-{{- end }}
+        {{ toYaml .Values.mpiImage.pullSecrets | indent 2 }}
+        {{- end }}
   volumes:
-  - name: kube-openmpi-run-data
-    persistentVolumeClaim:
-      claimName: kube-openmpi-run-data-claim
-  - name: kube-openmpi-guillotine
-    emptyDir: {}
-  - name: kube-openmpi-hostfile-dir
-    emptyDir: {}
-{{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
-  - name: kube-openmpi-hostfile-updater-params
-    configMap:
-      name: {{ .Release.Name }}-assets
-      items:
-      - key: hostfile_update_every
-        path: update_every
-{{ end }}
-  - name: kube-openmpi-utils
-    configMap:
-      name: {{ .Release.Name }}-assets
-      items:
-      - key: gen_hostfile.sh
-        path: gen_hostfile.sh
-        mode: 365
-  - name: kube-openmpi-ssh-key
-    secret:
-      secretName: {{ .Release.Name }}-ssh-key
-      defaultMode: 256
-  {{- range .Values.appCodesToSync }}
-  - name: kube-openmpi-sync-{{ .name }}
-    emptyDir: {}
-    {{- if .gitSecretName }}
-  - name: kube-openmpi-sync-{{ .name }}-secret
-    secret:
-      secretName: {{ .gitSecretName }}
-      defaultMode: 256
-    {{- end }}
-  {{- end }}
-{{ if .Values.mpiMaster.volumes }}
-{{ toYaml .Values.mpiMaster.volumes | indent 2 }}
-{{ end }}
-  initContainers:
-  {{- $root := . }}
-  {{- range .Values.appCodesToSync }}
-  - name: {{ .name }}-fetch
-    image: {{ $root.Values.gitSyncImage.repository }}:{{ $root.Values.gitSyncImage.tag }}
-    imagePullPolicy: {{ $root.Values.gitSyncImage.pullPolicy }}
-    env:
-    - name: GIT_SYNC_REPO
-      value: {{ .gitRepo }}
-    - name: GIT_SYNC_BRANCH
-      value: {{ .gitBranch }}
-    - name: GIT_SYNC_DEST
-      value: {{ .name }}
-    - name: GIT_SYNC_ONE_TIME
-      value: "true"
-    - name: GIT_SYNC_WAIT
-      value: {{ .fetchWaitSecond | default "0" | quote }}
-    {{- if .gitSecretName }}
-    - name: GIT_SYNC_SSH
-      value: "true"
-    - name: GIT_KNOWN_HOSTS
-      value: "false"
-    {{- end }}
-    volumeMounts:
-    - name: kube-openmpi-sync-{{ .name }}
-      mountPath: /git
-    {{- if .gitSecretName }}
-    - name: kube-openmpi-sync-{{ .name }}-secret
-      mountPath: /etc/git-secret
-    securityContext:
-      runAsUser: 0
-    {{- end }}
-  {{- end }}
-  - name: hostfile-initializer
-    image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
-    imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
-    command:
-      - sh
-      - -c
-      - |
-        /kube-openmpi/utils/gen_hostfile.sh $HOSTFILE_DIR/hostfile
-    env:
-    - name: HOSTFILE_DIR
-      value: /kube-openmpi/generated
-    volumeMounts:
-    - name: kube-openmpi-hostfile-dir
-      mountPath: /kube-openmpi/generated
-    - name: kube-openmpi-utils
-      mountPath: /kube-openmpi/utils
-  containers:
-  - name: mpi-master
-    image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-    imagePullPolicy: {{ .Values.image.pullPolicy }}
-    ports:
-    - containerPort: 2022
-    env:
-    - name: HOSTFILE
-      value: /kube-openmpi/generated/hostfile
-    - name: GUILLOTINE
-      value: /kube-openmpi/guillotine
-    {{- if .Values.mpiMaster.oneShot.enabled }}
-    - name: ONE_SHOT
-      value: "true"
-    command:
-    - /init.sh
-    - |
-{{ .Values.mpiMaster.oneShot.command | indent 6 }}
-    {{- end }}
-    volumeMounts:
+    - name: simulation-config
+      configMap:
+        name: {{ .Release.Name }}-simulation-config
     - name: kube-openmpi-run-data
-      mountPath: "/run_data"
+      persistentVolumeClaim:
+        claimName: kube-openmpi-run-data-claim
     - name: kube-openmpi-guillotine
-      mountPath: /kube-openmpi/guillotine
-    - name: kube-openmpi-ssh-key
-      mountPath: /ssh-key/openmpi
+      emptyDir: {}
     - name: kube-openmpi-hostfile-dir
-      mountPath: /kube-openmpi/generated/
-    - name: kube-openmpi-utils
-      mountPath: /kube-openmpi/utils
-    {{- range .Values.appCodesToSync }}
-    - name: kube-openmpi-sync-{{ .name }}
-      mountPath: {{ .mountPath }}
-      {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-    {{- end }}
-{{ if .Values.mpiMaster.volumeMounts  }}
-{{ toYaml .Values.mpiMaster.volumeMounts | indent 4 }}
-{{ end }}
-    resources:
-{{ toYaml .Values.mpiMaster.resources | indent 10 }}
-{{ if .Values.mpiMaster.oneShot.enabled }}
-{{ if .Values.mpiMaster.oneShot.autoScaleDownWorkers }}
-  - name: worker-auto-downing
-    image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
-    imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
-    command:
-    - sh
-    - -c
-    - |
-      while [ ! -e $GUILLOTINE/execute ];
-      do
-        sleep 5;
-        echo -n .
-      done
-      echo
-      return_code=$(cat $GUILLOTINE/execute)
-      if [ "$return_code" = 0 ]; then
-        kubectl -n {{ .Release.Namespace }} scale statefulsets {{ .Release.Name }}-worker --replicas=0
-      fi
-      echo Done.
-    env:
-    - name: GUILLOTINE
-      value: /kube-openmpi/guillotine
-    volumeMounts:
-    - name: kube-openmpi-guillotine
-      mountPath: /kube-openmpi/guillotine
-{{ end }}
-{{ end }}
-{{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
-  - name: hostfile-updater
-    image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
-    imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
-    command:
-    - sh
-    - -c
-    - |
-      while [ ! -e $GUILLOTINE/execute ];
-      do
-        /kube-openmpi/utils/gen_hostfile.sh $HOSTFILE_DIR/hostfile 1
-        if [ -e /kube-openmpi/hostfile-updater-params/update_every ]; then
-          SLEEP=$(cat /kube-openmpi/hostfile-updater-params/update_every)
-        fi
-        sleep ${SLEEP:-15}
-      done
-      echo Done.
-    env:
-    - name: HOSTFILE_DIR
-      value: /kube-openmpi/generated
-    - name: GUILLOTINE
-      value: /kube-openmpi/guillotine
-    volumeMounts:
-    - name: kube-openmpi-hostfile-dir
-      mountPath: /kube-openmpi/generated
-    - name: kube-openmpi-guillotine
-      mountPath: /kube-openmpi/guillotine
-    - name: kube-openmpi-utils
-      mountPath: /kube-openmpi/utils
+      emptyDir: {}
+    - name: kube-openmpi-results-dir
+      emptyDir: {}
+    - name: hdfs-config
+      configMap:
+        name: {{ .Values.persistence.hdfs.configMap }}
+          {{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
     - name: kube-openmpi-hostfile-updater-params
-      mountPath: /kube-openmpi/hostfile-updater-params
-{{ end }}
-  {{- with .Values.nodeSelector }}
+      configMap:
+        name: {{ .Release.Name }}-assets
+        items:
+          - key: hostfile_update_every
+            path: update_every
+          {{ end }}
+    - name: kube-openmpi-utils
+      configMap:
+        name: {{ .Release.Name }}-assets
+        items:
+          - key: gen_hostfile.sh
+            path: gen_hostfile.sh
+            mode: 365
+    - name: kube-openmpi-ssh-key
+      secret:
+        secretName: {{ .Release.Name }}-ssh-key
+        defaultMode: 256
+          {{- range .Values.appCodesToSync }}
+    - name: kube-openmpi-sync-{{ .name }}
+      emptyDir: {}
+          {{- if .gitSecretName }}
+    - name: kube-openmpi-sync-{{ .name }}-secret
+      secret:
+        secretName: {{ .gitSecretName }}
+        defaultMode: 256
+        {{- end }}
+        {{- end }}
+        {{ if .Values.mpiMaster.volumes }}
+        {{ toYaml .Values.mpiMaster.volumes | indent 2 }}
+        {{ end }}
+  initContainers:
+          {{- $root := . }}
+          {{- range .Values.appCodesToSync }}
+    - name: {{ .name }}-fetch
+      image: {{ $root.Values.gitSyncImage.repository }}:{{ $root.Values.gitSyncImage.tag }}
+      imagePullPolicy: {{ $root.Values.gitSyncImage.pullPolicy }}
+      env:
+        - name: GIT_SYNC_REPO
+          value: {{ .gitRepo }}
+        - name: GIT_SYNC_BRANCH
+          value: {{ .gitBranch }}
+        - name: GIT_SYNC_DEST
+          value: {{ .name }}
+        - name: GIT_SYNC_ONE_TIME
+          value: "true"
+        - name: GIT_SYNC_WAIT
+          value: {{ .fetchWaitSecond | default "0" | quote }}
+              {{- if .gitSecretName }}
+        - name: GIT_SYNC_SSH
+          value: "true"
+        - name: GIT_KNOWN_HOSTS
+          value: "false"
+            {{- end }}
+      volumeMounts:
+        - name: kube-openmpi-sync-{{ .name }}
+          mountPath: /git
+              {{- if .gitSecretName }}
+        - name: kube-openmpi-sync-{{ .name }}-secret
+          mountPath: /etc/git-secret
+      securityContext:
+        runAsUser: 0
+          {{- end }}
+          {{- end }}
+    - name: hostfile-initializer
+      image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
+      imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |
+          /kube-openmpi/utils/gen_hostfile.sh $HOSTFILE_DIR/hostfile
+      env:
+        - name: HOSTFILE_DIR
+          value: /kube-openmpi/generated
+      volumeMounts:
+        - name: kube-openmpi-hostfile-dir
+          mountPath: /kube-openmpi/generated
+        - name: kube-openmpi-utils
+          mountPath: /kube-openmpi/utils
+    - name: mpi-master-cleaner
+      image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
+      imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+      command: ['/bin/sh', '-c']
+      args:
+        - rm -Rf ${RUN_RESULTS}/* ${RUN_LOGS}/${HOSTNAME} ${RUN_DATA}/rsl.*
+      env:
+        - name: RUN_DATA
+          value: {{ .Values.simulation.data }}
+        - name: RUN_RESULTS
+          value: {{ .Values.simulation.results }}
+        - name: RUN_LOGS
+          value: {{ .Values.persistence.logs_dir }}
+      volumeMounts:
+        - name: simulation-config
+          mountPath: {{ .Values.simulation.config }}
+        - name: kube-openmpi-run-data
+          mountPath: {{ .Values.simulation.data }}
+        - name: kube-openmpi-results-dir
+          mountPath: {{ .Values.simulation.results }}
+  containers:
+    - name: mpi-master
+      image: "{{ .Values.mpiImage.repository }}:{{ .Values.mpiImage.tag }}"
+      imagePullPolicy: {{ .Values.mpiImage.pullPolicy }}
+      ports:
+        - containerPort: 2022
+      env:
+        - name: HOSTFILE
+          value: /kube-openmpi/generated/hostfile
+        - name: GUILLOTINE
+          value: /kube-openmpi/guillotine
+        - name: RUN_DATA
+          value: {{ .Values.simulation.data }}
+        - name: RUN_RESULTS
+          value: {{ .Values.simulation.results }}
+        - name: RUN_LOGS
+          value: {{ .Values.persistence.logs_dir }}
+              {{- if .Values.mpiMaster.oneShot.enabled }}
+        - name: ONE_SHOT
+          value: "true"
+        - name: SIMULATION_CONFIG
+          value: {{ .Values.simulation.config }}
+      command:
+        - /init.sh
+        - |
+                {{ .Values.mpiMaster.oneShot.command | indent 6 }}
+            {{- end }}
+      volumeMounts:
+        - name: simulation-config
+          mountPath: {{ .Values.simulation.config }}
+        - name: kube-openmpi-run-data
+          mountPath: {{ .Values.simulation.data }}
+        - name: kube-openmpi-results-dir
+          mountPath: {{ .Values.simulation.results }}
+        - name: kube-openmpi-guillotine
+          mountPath: /kube-openmpi/guillotine
+        - name: kube-openmpi-ssh-key
+          mountPath: /ssh-key/openmpi
+        - name: kube-openmpi-hostfile-dir
+          mountPath: /kube-openmpi/generated/
+        - name: kube-openmpi-utils
+          mountPath: /kube-openmpi/utils
+              {{- range .Values.appCodesToSync }}
+        - name: kube-openmpi-sync-{{ .name }}
+          mountPath: {{ .mountPath }}
+          {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+          {{- end }}
+          {{ if .Values.mpiMaster.volumeMounts  }}
+          {{ toYaml .Values.mpiMaster.volumeMounts | indent 4 }}
+          {{ end }}
+    - name: mpi-master-data-writer
+      image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+      imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
+      env:
+        - name: HADOOP_CUSTOM_CONF_DIR
+          value: "/etc/hadoop-custom-conf"
+        - name: SIMULATION_CONFIG
+          value: {{ .Values.simulation.config }}
+        - name: RUN_LOGS
+          value: {{ .Values.persistence.logs_dir }}
+      command: ['/bin/bash', '-l', '-c']
+      args:
+        #- /entrypoint.sh python3 app.py --debug -f {{ .Values.simulation.config }}/config.json start
+        #- /entrypoint.sh /usr/bin/tail -f /dev/null
+        - /entrypoint.sh python3 $(which writer.py) -m --debug -f {{ .Values.simulation.config }}/config.json start
+      ports:
+        - containerPort: 2022
+      volumeMounts:
+        - name: simulation-config
+          mountPath: {{ .Values.simulation.config }}
+        - name: kube-openmpi-run-data
+          mountPath: {{ .Values.simulation.data }}
+        - name: kube-openmpi-results-dir
+          mountPath: {{ .Values.simulation.results }}
+        - name: kube-openmpi-ssh-key
+          mountPath: /ssh-key/openmpi
+        - name: kube-openmpi-utils
+          mountPath: /kube-openmpi/utils
+        - name: hdfs-config
+          mountPath: /etc/hadoop-custom-conf
+          readOnly: true
+              {{- range .Values.appCodesToSync }}
+        - name: kube-openmpi-sync-{{ .name }}
+          mountPath: {{ .mountPath }}
+          {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+            {{- end }}
+            {{ if .Values.mpiWorkers.volumeMounts }}
+            {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+            {{ end }}
+      resources:
+          {{ toYaml .Values.mpiMaster.resources | indent 10 }}
+          {{ if .Values.mpiMaster.oneShot.enabled }}
+          {{ if .Values.mpiMaster.oneShot.autoScaleDownWorkers }}
+    - name: worker-auto-downing
+      image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
+      imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |
+          while [ ! -e $GUILLOTINE/execute ];
+          do
+            sleep 5;
+            echo -n .
+          done
+          echo
+          return_code=$(cat $GUILLOTINE/execute)
+          if [ "$return_code" = 0 ]; then
+            kubectl -n {{ .Release.Namespace }} scale statefulsets {{ .Release.Name }}-worker --replicas=0
+          fi
+          echo Done.
+      env:
+        - name: GUILLOTINE
+          value: /kube-openmpi/guillotine
+      volumeMounts:
+        - name: kube-openmpi-guillotine
+          mountPath: /kube-openmpi/guillotine
+          {{ end }}
+          {{ end }}
+          {{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
+    - name: hostfile-updater
+      image: {{ .Values.kubectlImage.repository }}:{{ .Values.kubectlImage.tag }}
+      imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |
+          while [ ! -e $GUILLOTINE/execute ];
+          do
+            /kube-openmpi/utils/gen_hostfile.sh $HOSTFILE_DIR/hostfile 1
+            if [ -e /kube-openmpi/hostfile-updater-params/update_every ]; then
+              SLEEP=$(cat /kube-openmpi/hostfile-updater-params/update_every)
+            fi
+            sleep ${SLEEP:-15}
+          done
+          echo Done.
+      env:
+        - name: HOSTFILE_DIR
+          value: /kube-openmpi/generated
+        - name: GUILLOTINE
+          value: /kube-openmpi/guillotine
+      volumeMounts:
+        - name: kube-openmpi-hostfile-dir
+          mountPath: /kube-openmpi/generated
+        - name: kube-openmpi-guillotine
+          mountPath: /kube-openmpi/guillotine
+        - name: kube-openmpi-utils
+          mountPath: /kube-openmpi/utils
+        - name: kube-openmpi-hostfile-updater-params
+          mountPath: /kube-openmpi/hostfile-updater-params
+        {{ end }}
+        {{- with .Values.nodeSelector }}
   nodeSelector:
-{{ toYaml . | indent 4 }}
-  {{- end }}
-  {{- with .Values.mpiMaster.tolerations }}
+        {{ toYaml . | indent 4 }}
+        {{- end }}
+        {{- with .Values.mpiMaster.tolerations }}
   tolerations:
-{{ toYaml . | indent 4 }}
-  {{- end }}
-  {{- with .Values.mpiMaster.affinity }}
+        {{ toYaml . | indent 4 }}
+        {{- end }}
+        {{- with .Values.mpiMaster.affinity }}
   affinity:
-{{ toYaml . | indent 4 }}
-  {{- end }}
+        {{ toYaml . | indent 4 }}
+        {{- end }}
