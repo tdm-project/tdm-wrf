@@ -22,8 +22,16 @@ NEST ?= 1
 CENTOS_WRF_IMAGE ?= $(REPOSITORY):wrf_$(WRF_VERSION)-$(OPENMPI_VERSION)-$(CENTOS_TAG)-$(KUBE_OPENMPI_VERSION)
 CENTOS_WRF_ALIAS ?= $(REPOSITORY):wrf_$(WRF_VERSION)
 
+# Args for WRF Writer
+HADOOP_CLIENT_VERSION ?= 3.2.0-ubuntu
+WRF_WRITER_BASE_IMAGE ?= crs4/hadoopclient:$(HADOOP_CLIENT_VERSION)
+TILEDB_VERSION ?= 1.6.0
+TILEDB_PY_VERSION ?= 0.4.3
+WRF_WRITER_IMAGE ?= $(REPOSITORY):wrf_writer_$(HADOOP_CLIENT_VERSION)-$(TILEDB_VERSION)-$(TILEDB_PY_VERSION)
+
+
 .PHONY: build
-build: centos_image centos_wrf_image
+build: centos_image centos_wrf_image wrf_writer_image
 
 centos_image:
 	docker build \
@@ -48,7 +56,19 @@ centos_wrf_image:
 		. && \
 		docker tag $(CENTOS_WRF_IMAGE) $(CENTOS_WRF_ALIAS)
 
+wrf_writer_image:
+	cd writer && \
+	docker build \
+		--build-arg WRF_WRITER_BASE_IMAGE=$(WRF_WRITER_BASE_IMAGE) \
+		--build-arg WRF_WRITER_BASE_IMAGE=$(WRF_WRITER_BASE_IMAGE) \
+		--build-arg TILEDB_VERSION=$(TILEDB_VERSION) \
+		--build-arg TILEDB_PY_VERSION=$(TILEDB_PY_VERSION) \
+		-t $(WRF_WRITER_IMAGE) \
+		-f Dockerfile \
+		.
+
 
 publish:
 	docker push $(CENTOS_IMAGE) && docker push $(CENTOS_ALIAS)
 	docker push $(CENTOS_WRF_IMAGE) && docker push $(CENTOS_WRF_ALIAS)
+	docker push $(WRF_WRITER_IMAGE)
