@@ -192,7 +192,7 @@ spec:
           args:
             #- /entrypoint.sh python3 writer.py --debug -m -f {{ .Values.simulation.config }}/config.json start
             #- /entrypoint.sh /usr/bin/tail -f /dev/null
-            - /entrypoint.sh python3 $(which writer.py) -m --debug -f {{ .Values.simulation.config }}/config.json start
+            - /entrypoint.sh python3 $(which writer.py) --debug -f {{ .Values.simulation.config }}/config.json start
             #- /entrypoint.sh cat /etc/hosts
           ports:
             - containerPort: 2022
@@ -438,7 +438,7 @@ spec:
       args:
         #- /entrypoint.sh python3 app.py --debug -f {{ .Values.simulation.config }}/config.json start
         #- /entrypoint.sh /usr/bin/tail -f /dev/null
-        - /entrypoint.sh python3 $(which writer.py) -m --debug -f {{ .Values.simulation.config }}/config.json start
+        - /entrypoint.sh python3 $(which writer.py) --debug -f {{ .Values.simulation.config }}/config.json start
       ports:
         - containerPort: 2022
       volumeMounts:
