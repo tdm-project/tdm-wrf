@@ -12,6 +12,9 @@ cd resources
 # create the namespace
 kubectl create namespace ${KUBE_NAMESPACE}
 
+# copy hdfs configmap
+../copy-hdfs-config-cm.sh
+
 # create ClusterRoleBinding
 kubectl apply -f cluster-role-binding.yaml
 
@@ -28,5 +31,5 @@ helm template chart \
 # wait until $MPI_CLUSTER_NAME-master is ready
 until kubectl get -n ${KUBE_NAMESPACE} po ${MPI_CLUSTER_NAME}-master | grep Running ;
 do
-    date; sleep 1; echo "";
+    date; sleep 1; echo "Waiting for kube-openmpi...";
 done
