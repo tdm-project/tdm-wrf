@@ -14,4 +14,5 @@ helm template chart \
      -f ssh-key.yaml | kubectl -n ${KUBE_NAMESPACE} delete -f -
 
 # delete the namespace
+# TODO: uncomment to completely delete all resources
 kubectl delete namespace ${KUBE_NAMESPACE}
