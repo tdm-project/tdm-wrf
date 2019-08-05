@@ -115,25 +115,47 @@ class Simulation(object):
     def __init__(self, config_filepath) -> None:
         super().__init__()
         self._config_filepath = config_filepath
-        self.configuration = self.load_configuration(config_filepath)
-        self.run_id = self.configuration['run_id']
-        self.run_dir = self.configuration['data']
-        self.data_dir = self.configuration['results']
         self._datafiles = set()
-        simulation_file_path = _os.path.join(self.run_dir, WRF_CONFIG_FILE)
-        with open(simulation_file_path, 'r') as stream:
-            self._configuration = _yaml.safe_load(stream)
-            _logger.debug("Loaded wrf configuration: %s", _json.dumps(self._configuration, indent=4, sort_keys=True))
+        self._configuration = None
+        self._global_configuration = None
 
     # load json configuration
-    def load_configuration(self, filename):
-        _logger.debug("Loading configuration file: %s", filename)
-        with open(filename) as f:
-            configuration = _json.load(f)
-            load_hdfs_configutarion(configuration)
+    def load_configuration(self, wait_for_data=False):
+        with open(self._config_filepath) as f:
+            self._global_configuration = _json.load(f)
+            load_hdfs_configutarion(self._global_configuration)
             _logger.debug("Loaded configuration: %s", _json.dumps(
-                configuration, indent=4, sort_keys=True))
-            return configuration
+                self._global_configuration, indent=4, sort_keys=True))
+            simulation_file_path = _os.path.join(self.run_dir, WRF_CONFIG_FILE)
+            _logger.debug("Loading configuration file: %s", simulation_file_path)
+            if wait_for_data:
+                self.wait_for_data()
+            with open(simulation_file_path, 'r') as stream:
+                self._configuration = _yaml.safe_load(stream)
+                _logger.debug("Loaded wrf configuration: %s",
+                              _json.dumps(self._configuration, indent=4, sort_keys=True))
+
+    @property
+    def configuration(self):
+        if not self._global_configuration:
+            self.load_configuration()
+        return self._global_configuration
+
+    def wait_for_data(self):
+        while not _os.path.exists(self.run_dir):
+            _time.sleep(2)
+
+    @property
+    def run_id(self):
+        return self.configuration['run_id']
+
+    @property
+    def run_dir(self):
+        return self.configuration['data']
+
+    @property
+    def data_dir(self):
+        return self.configuration['results']
 
     @property
     def time_step(self):
@@ -735,11 +757,12 @@ class WriterManager(object):
                 # self.writers[datafile.filename] = p
                 # p.start()
                 # _logger.info("Writer %s (pid: %d) started", p.name, p.pid)
-                p = _Thread(target=WriterManager.start_writer_thread,
-                            args=(self.simulation, datafile), name=datafile.filename)
-                self.writers[datafile.filename] = p
-                p.start()
-                _logger.info("Writer %s started", writer.name)
+                # p = _Thread(target=WriterManager.start_writer_thread,
+                #             args=(self.simulation, datafile), name=datafile.filename)
+                # self.writers[datafile.filename] = p
+                # p.start()
+                # _logger.info("Writer %s started", writer.name)
+                raise Exception("Multiprocessing unsupported yet!!!")
             else:
                 writer.write_file_frames()
                 self._update_datafile_checkpoint(writer.datafile.filename, True)
@@ -854,6 +877,8 @@ def main():
 
         # load wrf configuration
         simulation = Simulation(options.file)
+        simulation.wait_for_data()
+
         # launch user command
         if options.cmd == COMMANDS[0]:
             mgt = WriterManager(simulation)
