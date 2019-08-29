@@ -8,6 +8,16 @@ GEOG_TGZ=${GEOG_NAME}.tar.gz
 UCAR_PATH="http://www2.mmm.ucar.edu/wrf/src/wps_files"
 GEOG_URL="${UCAR_PATH}/${GEOG_TGZ}"
 
+if [[ -f "${WPSGEOG}/.__success__" ]]; then
+  echo -e "\n WARNING: target directory '${WPSGEOG}' not empty!\n"
+  exit 0
+fi
+
+echo "Target folder: ${WPSGEOG}"
+if [[ ! -d ${WPSGEOG} ]]; then
+  mkdir -p ${WPSGEOG}
+fi
+
 echo "Downloading ${GEOG_URL}"
 curl -SL ${GEOG_URL} | tar -xzC ${WPSGEOG}
 
