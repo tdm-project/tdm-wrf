@@ -1,0 +1,220 @@
+{{ if and .Values.mpiWorkers.customScheduling.enabled .Values.mpiWorkers.customScheduling.podDisruptionBudget.enabled }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-worker-pdb
+spec:
+  minAvailable: {{ .Values.mpiWorkers.num }}
+  selector:
+    matchLabels:
+      app: {{ template "..name" . }}
+      chart: {{ template "..chart" . }}
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
+      role: worker
+---
+{{ end }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-worker
+  labels:
+    app: {{ template "..name" . }}
+    chart: {{ template "..chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    role: worker
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "..name" . }}
+      chart: {{ template "..chart" . }}
+      release: {{ .Release.Name }}
+      heritage: {{ .Release.Service }}
+      role: worker
+  serviceName: {{ .Release.Name }}
+  podManagementPolicy: {{.Values.mpiWorkers.podManagementPolicy}}
+  replicas: {{.Values.mpiWorkers.num}}
+  template:
+    metadata:
+      labels:
+        app: {{ template "..name" . }}
+        chart: {{ template "..chart" . }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+        role: worker
+    spec:
+            {{- if .Values.mpiWorkers.customScheduling.enabled }}
+      schedulerName: {{.Values.mpiWorkers.customScheduling.schedulerName}}
+            {{- end }}
+      securityContext:
+            {{ toYaml .Values.mpiWorkers.securityContext | indent 8 }}
+            {{- if .Values.mpiImage.pullSecrets }}
+      imagePullSecrets:
+            {{ toYaml .Values.mpiImage.pullSecrets | indent 6 }}
+            {{- end }}
+      volumes:
+        - name: config-data-volume
+          configMap:
+            name: {{ .Release.Name }}-config-data
+        - name: init-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-init-data-claim
+        - name: run-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-run-data-claim
+        - name: log-data-volume
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-log-data-claim
+        - name: out-data-volume
+          emptyDir: {}
+        - name: kube-openmpi-ssh-key
+          secret:
+            secretName: {{ .Release.Name }}-ssh-key
+            defaultMode: 256
+        - name: kube-openmpi-utils
+          configMap:
+            name: {{ .Release.Name }}-assets
+            items:
+              - key: gen_hostfile.sh
+                path: gen_hostfile.sh
+                mode: 365
+        - name: hdfs-config
+          configMap:
+            name: {{ .Values.persistence.out_data.hdfs.configMap }}
+              {{- range .Values.appCodesToSync }}
+        - name: kube-openmpi-sync-{{ .name }}
+              {{- if .gitSecretName }}
+        - name: kube-openmpi-sync-{{ .name }}-secret
+          secret:
+            secretName: {{ .gitSecretName }}
+            defaultMode: 256
+            {{- end }}
+            {{- end }}
+            {{ if .Values.mpiWorkers.volumes }}
+            {{ toYaml .Values.mpiWorkers.volumes | indent  6 }}
+            {{ end }}
+      initContainers:
+              {{- $root := . -}}
+              {{- range .Values.appCodesToSync }}
+        - name: {{ .name }}-fetch
+          image: {{ $root.Values.gitSyncImage.repository }}:{{ $root.Values.gitSyncImage.tag }}
+          imagePullPolicy: {{ $root.Values.gitSyncImage.pullPolicy }}
+          env:
+            - name: GIT_SYNC_REPO
+              value: {{ .gitRepo }}
+            - name: GIT_SYNC_BRANCH
+              value: {{ .gitBranch }}
+            - name: GIT_SYNC_DEST
+              value: {{ .name }}
+            - name: GIT_SYNC_ONE_TIME
+              value: "true"
+            - name: GIT_SYNC_WAIT
+              value: {{ .fetchWaitSecond | default "0" | quote }}
+                  {{- if .gitSecretName }}
+            - name: GIT_SYNC_SSH
+              value: "true"
+            - name: GIT_KNOWN_HOSTS
+              value: "false"
+                {{- end }}
+          volumeMounts:
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: /git
+                  {{- if .gitSecretName }}
+            - name: kube-openmpi-sync-{{ .name }}-secret
+              mountPath: /etc/git-secret
+          securityContext:
+            runAsUser: 0
+            {{- end }}
+            {{- end }}
+        {{- if not .Values.global.running.skip.finalize }}
+        - name: wait-for-wrf-data-init
+          image: "groundnuty/k8s-wait-for:latest"
+          imagePullPolicy: "Always"
+          args: ["job", "{{.Release.Name}}-wrf-init-job-2-finalize-wd"]
+        {{- end }}
+      containers:
+        - name: mpi-worker
+          image: "{{ .Values.mpiImage.repository }}:{{ .Values.mpiImage.tag }}"
+          imagePullPolicy: {{ .Values.mpiImage.pullPolicy }}
+          ports:
+            - containerPort: 2022
+          env:
+            - name: CONFIG_DATA
+              value: {{ .Values.persistence.config_data.path }}
+            - name: LOG_DATA
+              value: {{ .Values.persistence.log_data.path }}
+          volumeMounts:
+            - name: run-data-volume
+              mountPath: {{ .Values.persistence.run_data.path }}
+            - name: out-data-volume
+              mountPath: {{ .Values.persistence.out_data.path }}
+            - name: log-data-volume
+              mountPath: {{ .Values.persistence.log_data.path }}
+            - name: kube-openmpi-ssh-key
+              mountPath: /ssh-key/openmpi
+            - name: kube-openmpi-utils
+              mountPath: /kube-openmpi/utils
+                  {{- range .Values.appCodesToSync }}
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: {{ .mountPath }}
+              {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+                {{- end }}
+                {{ if .Values.mpiWorkers.volumeMounts }}
+                {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+                {{ end }}
+          resources:
+              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}
+              {{- with .Values.mpiWorkers.nodeSelector }}
+        # - name: mpi-worker-data-writer
+        #   image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+        #   imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
+        #   env:
+        #     - name: HADOOP_CUSTOM_CONF_DIR
+        #       value: "/etc/hadoop-custom-conf"
+        #     - name: CONFIG_DATA
+        #       value: {{ .Values.persistence.config_data.path }}
+        #     - name: LOG_DATA
+        #       value: {{ .Values.persistence.log_data.path }}
+        #   command: ['/bin/bash', '-l', '-c']
+        #   args:
+        #     #- /entrypoint.sh python3 writer.py --debug -m -f ${CONFIG_DATA}/config.json start
+        #     #- /entrypoint.sh /usr/bin/tail -f /dev/null
+        #     #- /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/config.json start
+        #     #- /entrypoint.sh cat /etc/hosts
+        #     - sleep 10
+        #   ports:
+        #     - containerPort: 2022
+        #   volumeMounts:
+        #     - name: run-data-volume
+        #       mountPath: {{ .Values.persistence.run_data.path }}
+        #     - name: out-data-volume
+        #       mountPath: {{ .Values.persistence.out_data.path }}
+        #     - name: log-data-volume
+        #       mountPath: {{ .Values.persistence.log_data.path }}
+        #     - name: kube-openmpi-ssh-key
+        #       mountPath: /ssh-key/openmpi
+        #     - name: hdfs-config
+        #       mountPath: /etc/hadoop-custom-conf
+        #       readOnly: true
+        #     - name: kube-openmpi-utils
+        #       mountPath: /kube-openmpi/utils
+        #           {{- range .Values.appCodesToSync }}
+        #     - name: kube-openmpi-sync-{{ .name }}
+        #       mountPath: {{ .mountPath }}
+        #       {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+        #         {{- end }}
+        #         {{ if .Values.mpiWorkers.volumeMounts }}
+        #         {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+        #         {{ end }}          
+      nodeSelector:
+            {{ toYaml . | indent 8 }}
+            {{- end }}
+            {{- with .Values.mpiWorkers.tolerations }}
+      tolerations:
+            {{ toYaml . | indent 8 }}
+            {{- end }}
+            {{- with .Values.mpiWorkers.affinity }}
+      affinity:
+            {{ toYaml . | indent 8 }}
+        {{- end }}
