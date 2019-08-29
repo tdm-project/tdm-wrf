@@ -1,0 +1,112 @@
+{{ if not .Values.global.running.skip.prepare_wd }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{.Release.Name}}-wrf-init-job-1a-prepare-wd"
+  labels:
+    app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+    app.kubernetes.io/instance: {{.Release.Name | quote }}
+    helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: "{{.Release.Name}}-wrf-init-job-1a-prepare-wd"
+      labels:
+        app.kubernetes.io/managed-by: {{.Release.Service | quote }}
+        app.kubernetes.io/instance: {{.Release.Name | quote }}
+        helm.sh/chart: "{{.Chart.Name}}-{{.Chart.Version}}"
+    spec:
+      volumes:
+        - name: config-data
+          configMap:
+            name: {{ .Release.Name }}-config-data
+        - name: init-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-init-data-claim
+        - name: run-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-run-data-claim
+        - name: log-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-log-data-claim
+      initContainers:
+        - name: fix-permissions
+          image: "alpine:latest"
+          imagePullPolicy: "{{ .Values.tdmToolImage.pullPolicy }}"
+          command: ["/bin/sh","-c"]
+          args: ["mkdir -p {{ .Values.persistence.run_data.path }} && rm -Rf ${RUN_DATA}/* && chmod -R a+rw {{ .Values.persistence.run_data.path }}"]          
+          env:
+            - name: RUN_DATA
+              value: {{ .Values.persistence.run_data.path }}
+            - name: LOG_DATA
+              value: {{ .Values.persistence.log_data.path }}
+          volumeMounts:
+            - name: config-data
+              mountPath: {{ .Values.persistence.config_data.path }}
+            - name: init-data
+              mountPath: {{ .Values.persistence.init_data.path }}
+            - name: run-data
+              mountPath: {{ .Values.persistence.run_data.path }}
+      containers:
+        # - name: shell
+        #   image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+        #   imagePullPolicy: "{{ .Values.mpiDataWriterImage.pullPolicy }}"
+        #   command: ["/bin/sleep","{{default "3600" .Values.sleepyTime}}"]
+        #   volumeMounts:
+        #     - name: config-data
+        #       mountPath: {{ .Values.persistence.config_data.path }}
+        #     - name: init-data
+        #       mountPath: {{ .Values.persistence.init_data.path }}
+        #     - name: run-data
+        #       mountPath: {{ .Values.persistence.run_data.path }}
+        - name: run-data-cleaner
+          image: "{{ .Values.wrfInitializerImage.repository }}:{{ .Values.wrfInitializerImage.tag }}"
+          imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+          command: ['/bin/sh', '-c']
+          args:
+            - rm -Rf ${LOG_DATA}/${HOSTNAME} ${RUN_DATA}/rsl.*
+          env:
+            - name: RUN_DATA
+              value: {{ .Values.persistence.run_data.path }}
+            - name: LOG_DATA
+              value: {{ .Values.persistence.log_data.path }}
+          volumeMounts:
+            - name: run-data
+              mountPath: {{ .Values.persistence.run_data.path }}            
+            - name: log-data
+              mountPath: {{ .Values.persistence.log_data.path }}
+        - name: copy-parameters
+          image: "alpine:latest"
+          imagePullPolicy: "{{ .Values.wrfInitializerImage.pullPolicy }}"
+          command: ["/bin/sh","-c"]
+          args: ["cp {{ .Values.persistence.config_data.path }}/* {{ .Values.persistence.run_data.path }}/"]
+          volumeMounts:            
+            - name: config-data
+              mountPath: {{ .Values.persistence.config_data.path }}
+            - name: init-data
+              mountPath: {{ .Values.persistence.init_data.path }}
+            - name: run-data
+              mountPath: {{ .Values.persistence.run_data.path }}
+        - name: link-details
+          image: "{{ .Values.wrfInitializerImage.repository }}:{{ .Values.wrfInitializerImage.tag }}"
+          imagePullPolicy: "{{ .Values.wrfInitializerImage.pullPolicy }}"
+          command: [
+              "link_details.sh", 
+              "{{ .Values.persistence.run_data.path }}",
+              "{{ .Values.persistence.config_data.path }}/details-files"
+            ]
+          volumeMounts:            
+            - name: config-data
+              mountPath: {{ .Values.persistence.config_data.path }}
+            - name: init-data
+              mountPath: {{ .Values.persistence.init_data.path }}
+            - name: run-data
+              mountPath: {{ .Values.persistence.run_data.path }}
+      restartPolicy: OnFailure
+{{ end }}
