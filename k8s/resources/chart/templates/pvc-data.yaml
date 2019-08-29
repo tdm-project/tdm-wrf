@@ -1,0 +1,49 @@
+{{ if .Values.persistence.createPVC }}
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-init-data-claim
+  namespace: openmpi
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.persistence.init_data.storage }}
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-run-data-claim
+  namespace: openmpi
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.persistence.run_data.storage }}
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .Release.Name }}-log-data-claim
+  namespace: openmpi
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.persistence.log_data.storage }}
+
+{{ end }}
