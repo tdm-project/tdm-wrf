@@ -1,5 +1,6 @@
-ARG BASE_VERSION=latest
-FROM tdmproject/wrf-base:$BASE_VERSION
+ARG WRF_BASE_IMAGE
+FROM ${WRF_BASE_IMAGE}
+
 LABEL maintainer="Gianluigi Zanetti <zag@crs4.it>"
 # Based on Jamie Wolff <jwolff@ucar.edu> and Michelle Harrold <harrold@ucar.edu>
 # wps_wrf_upp Dockerfile

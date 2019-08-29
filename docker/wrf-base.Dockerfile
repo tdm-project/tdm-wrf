@@ -1,4 +1,4 @@
-ARG VERSION=latest
+ARG VERSION=centos7
 FROM centos:$VERSION
 LABEL maintainer="Gianluigi Zanetti <zag@crs4.it>"
 #
@@ -19,7 +19,6 @@ RUN yum -y update \
            gcc gcc-gfortran gcc-c++ glibc.i686 libgcc.i686 \
            libpng-devel jasper jasper-devel ksh hostname m4 make perl tar tcsh time \
            wget which zlib zlib-devel epel-release \
- && yum -y install \
            netcdf-devel.x86_64 netcdf-fortran-devel.x86_64 \
            netcdf-fortran.x86_64 hdf5.x86_64 \
  && yum clean all \
