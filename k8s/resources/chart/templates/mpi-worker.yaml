@@ -164,8 +164,6 @@ spec:
                 {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
                 {{ end }}
           resources:
-              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}
-              {{- with .Values.mpiWorkers.nodeSelector }}
         # - name: mpi-worker-data-writer
         #   image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
         #   imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
@@ -207,6 +205,7 @@ spec:
         #         {{ if .Values.mpiWorkers.volumeMounts }}
         #         {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
         #         {{ end }}          
+      {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
             {{ toYaml . | indent 8 }}
             {{- end }}
