@@ -164,47 +164,45 @@ spec:
                 {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
                 {{ end }}
           resources:
-        # - name: mpi-worker-data-writer
-        #   image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
-        #   imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
-        #   env:
-        #     - name: HADOOP_CUSTOM_CONF_DIR
-        #       value: "/etc/hadoop-custom-conf"
-        #     - name: CONFIG_DATA
-        #       value: {{ .Values.persistence.config_data.path }}
-        #     - name: LOG_DATA
-        #       value: {{ .Values.persistence.log_data.path }}
-        #   command: ['/bin/bash', '-l', '-c']
-        #   args:
-        #     #- /entrypoint.sh python3 writer.py --debug -m -f ${CONFIG_DATA}/config.json start
-        #     #- /entrypoint.sh /usr/bin/tail -f /dev/null
-        #     #- /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/config.json start
-        #     #- /entrypoint.sh cat /etc/hosts
-        #     - sleep 10
-        #   ports:
-        #     - containerPort: 2022
-        #   volumeMounts:
-        #     - name: run-data-volume
-        #       mountPath: {{ .Values.persistence.run_data.path }}
-        #     - name: out-data-volume
-        #       mountPath: {{ .Values.persistence.out_data.path }}
-        #     - name: log-data-volume
-        #       mountPath: {{ .Values.persistence.log_data.path }}
-        #     - name: kube-openmpi-ssh-key
-        #       mountPath: /ssh-key/openmpi
-        #     - name: hdfs-config
-        #       mountPath: /etc/hadoop-custom-conf
-        #       readOnly: true
-        #     - name: kube-openmpi-utils
-        #       mountPath: /kube-openmpi/utils
-        #           {{- range .Values.appCodesToSync }}
-        #     - name: kube-openmpi-sync-{{ .name }}
-        #       mountPath: {{ .mountPath }}
-        #       {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-        #         {{- end }}
-        #         {{ if .Values.mpiWorkers.volumeMounts }}
-        #         {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
-        #         {{ end }}          
+              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}              
+        - name: worker-data-writer
+          image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+          imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
+          env:
+            - name: HADOOP_CUSTOM_CONF_DIR
+              value: "/etc/hadoop-custom-conf"
+            - name: CONFIG_DATA
+              value: {{ .Values.persistence.config_data.path }}
+            - name: LOG_DATA
+              value: {{ .Values.persistence.log_data.path }}
+          command: ['/bin/bash', '-l', '-c']
+          args:
+            #- /entrypoint.sh python3 writer.py --debug -m -f ${CONFIG_DATA}/config.json start
+            #- /entrypoint.sh /usr/bin/tail -f /dev/null
+            - /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/config.json start
+            #- /entrypoint.sh cat /etc/hosts
+            #- sleep 10
+          ports:
+            - containerPort: 2022
+          volumeMounts:
+            - name: run-data-volume
+              mountPath: {{ .Values.persistence.run_data.path }}
+            - name: out-data-volume
+              mountPath: {{ .Values.persistence.out_data.path }}
+            - name: log-data-volume
+              mountPath: {{ .Values.persistence.log_data.path }}
+            - name: kube-openmpi-ssh-key
+              mountPath: /ssh-key/openmpi
+            - name: hdfs-config
+              mountPath: /etc/hadoop-custom-conf
+              readOnly: true
+            - name: kube-openmpi-utils
+              mountPath: /kube-openmpi/utils
+            {{- range .Values.appCodesToSync }}
+            - name: kube-openmpi-sync-{{ .name }}
+              mountPath: {{ .mountPath }}
+              {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+            {{- end }}
       {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
             {{ toYaml . | indent 8 }}

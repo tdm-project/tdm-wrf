@@ -197,52 +197,52 @@ spec:
           {{ end }}
       resources:
           {{ toYaml .Values.mpiMaster.resources | indent 10 }}
-
-    # - name: mpi-master-data-writer
-    #   image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
-    #   imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
-    #   env:
-    #     - name: HADOOP_CUSTOM_CONF_DIR
-    #       value: "/etc/hadoop-custom-conf"
-    #     - name: CONFIG_DATA
-    #       value: {{ .Values.persistence.config_data.path }}
-    #     - name: RUN_DATA
-    #       value: {{ .Values.persistence.run_data.path }}
-    #     - name: OUT_DATA
-    #       value: {{ .Values.persistence.out_data.path }}
-    #     - name: LOG_DATA
-    #       value: {{ .Values.persistence.log_data.path }}
-    #   command: ['/bin/bash', '-l', '-c']
-    #   args:
-    #     #- /entrypoint.sh python3 app.py --debug -f ${CONFIG_DATA}/config.json start
-    #     #- /entrypoint.sh /usr/bin/tail -f /dev/null
-    #     #- /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/config.json start
-    #     - /entrypoint.sh usr/bin/sleep 5
-    #   ports:
-    #     - containerPort: 2022
-    #   volumeMounts:
-    #     - name: run-data
-    #       mountPath: {{ .Values.persistence.run_data.path }}
-    #     - name: out-data
-    #       mountPath: {{ .Values.persistence.out_data.path }}
-    #     - name: log-data
-    #       mountPath: {{ .Values.persistence.log_data.path }}
-    #     - name: kube-openmpi-ssh-key
-    #       mountPath: /ssh-key/openmpi
-    #     - name: kube-openmpi-utils
-    #       mountPath: /kube-openmpi/utils
-    #     - name: hdfs-config
-    #       mountPath: /etc/hadoop-custom-conf
-    #       readOnly: true
-    #           {{- range .Values.appCodesToSync }}
-    #     - name: kube-openmpi-sync-{{ .name }}
-    #       mountPath: {{ .mountPath }}
-    #       {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-    #         {{- end }}
-    #         {{ if .Values.mpiWorkers.volumeMounts }}
-    #         {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
-    #         {{ end }}      
-
+    {{- if .Values.persistence.enable_writer }}
+    - name: data-writer
+      image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
+      imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
+      env:
+        - name: HADOOP_CUSTOM_CONF_DIR
+          value: "/etc/hadoop-custom-conf"
+        - name: CONFIG_DATA
+          value: {{ .Values.persistence.config_data.path }}
+        - name: RUN_DATA
+          value: {{ .Values.persistence.run_data.path }}
+        - name: OUT_DATA
+          value: {{ .Values.persistence.out_data.path }}
+        - name: LOG_DATA
+          value: {{ .Values.persistence.log_data.path }}
+      command: ['/bin/bash', '-l', '-c']
+      args:
+        #- /entrypoint.sh python3 app.py --debug -f ${CONFIG_DATA}/config.json start
+        #- /entrypoint.sh /usr/bin/tail -f /dev/null
+        - /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/config.json start
+        #- /entrypoint.sh usr/bin/sleep 5
+      ports:
+        - containerPort: 2022
+      volumeMounts:
+        - name: run-data
+          mountPath: {{ .Values.persistence.run_data.path }}
+        - name: out-data
+          mountPath: {{ .Values.persistence.out_data.path }}
+        - name: log-data
+          mountPath: {{ .Values.persistence.log_data.path }}
+        - name: kube-openmpi-ssh-key
+          mountPath: /ssh-key/openmpi
+        - name: kube-openmpi-utils
+          mountPath: /kube-openmpi/utils
+        - name: hdfs-config
+          mountPath: /etc/hadoop-custom-conf
+          readOnly: true
+              {{- range .Values.appCodesToSync }}
+        - name: kube-openmpi-sync-{{ .name }}
+          mountPath: {{ .mountPath }}
+          {{ if .subPath }}subPath: {{.subPath}} {{ end }}
+            {{- end }}
+            {{ if .Values.mpiWorkers.volumeMounts }}
+            {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+            {{ end }}      
+    {{ end }}
     {{ if .Values.mpiMaster.oneShot.enabled }}
     {{ if .Values.mpiMaster.oneShot.autoScaleDownWorkers }}    
     - name: worker-auto-downing

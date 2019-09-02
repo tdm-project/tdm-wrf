@@ -87,6 +87,7 @@ domains:
 
 persistence:
   createPVC: false
+  enable_writer: true
   config_data:
     path: "/data/config"
   init_data: 
