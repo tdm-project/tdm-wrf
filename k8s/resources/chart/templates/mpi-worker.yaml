@@ -155,14 +155,14 @@ spec:
               mountPath: /ssh-key/openmpi
             - name: kube-openmpi-utils
               mountPath: /kube-openmpi/utils
-                  {{- range .Values.appCodesToSync }}
+            {{- range .Values.appCodesToSync }}
             - name: kube-openmpi-sync-{{ .name }}
               mountPath: {{ .mountPath }}
               {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-                {{- end }}
-                {{ if .Values.mpiWorkers.volumeMounts }}
-                {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
-                {{ end }}
+            {{- end }}
+            {{ if .Values.mpiWorkers.volumeMounts }}
+            {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
+            {{ end }}
           resources:
               {{ toYaml .Values.mpiWorkers.resources | indent 10 }}              
         - name: worker-data-writer
@@ -206,12 +206,12 @@ spec:
       {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
             {{ toYaml . | indent 8 }}
-            {{- end }}
-            {{- with .Values.mpiWorkers.tolerations }}
+      {{- end }}
+      {{- with .Values.mpiWorkers.tolerations }}
       tolerations:
             {{ toYaml . | indent 8 }}
-            {{- end }}
-            {{- with .Values.mpiWorkers.affinity }}
+      {{- end }}
+      {{- with .Values.mpiWorkers.affinity }}
       affinity:
             {{ toYaml . | indent 8 }}
-        {{- end }}
+      {{- end }}

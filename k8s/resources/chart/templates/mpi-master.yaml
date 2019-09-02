@@ -304,15 +304,15 @@ spec:
         - name: kube-openmpi-hostfile-updater-params
           mountPath: /kube-openmpi/hostfile-updater-params
         {{ end }}
-        {{- with .Values.nodeSelector }}
+  {{- with .Values.nodeSelector }}
   nodeSelector:
         {{ toYaml . | indent 4 }}
-        {{- end }}
-        {{- with .Values.mpiMaster.tolerations }}
+  {{- end }}
+  {{- with .Values.mpiMaster.tolerations }}
   tolerations:
         {{ toYaml . | indent 4 }}
-        {{- end }}
-        {{- with .Values.mpiMaster.affinity }}
+  {{- end }}
+  {{- with .Values.mpiMaster.affinity }}
   affinity:
         {{ toYaml . | indent 4 }}
-        {{- end }}
+  {{- end }}
