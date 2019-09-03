@@ -165,7 +165,7 @@ spec:
             {{ end }}
           resources:
               {{ toYaml .Values.mpiWorkers.resources | indent 10 }}              
-        - name: worker-data-writer
+        - name: data-writer
           image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
           imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
           env:
@@ -202,7 +202,7 @@ spec:
             - name: kube-openmpi-sync-{{ .name }}
               mountPath: {{ .mountPath }}
               {{ if .subPath }}subPath: {{.subPath}} {{ end }}
-            {{- end }}
+            {{- end }}      
       {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
             {{ toYaml . | indent 8 }}
