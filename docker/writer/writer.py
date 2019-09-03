@@ -330,7 +330,14 @@ class Writer(object):
             else None
 
         # define name of arrays
-        self.base_path = self.config["persistence"]["base_dir"] if "persistence" in self.config else _os.getcwd()
+        try:
+            self.base_path = self.config["persistence"]["out_data"]["path"] \
+                if "persistence" in self.config else _os.getcwd()
+        except KeyError as e:
+            _logger.exception(e)
+            _logger.warning(
+                "'persistence.out_data.path' not found on WRF configuration file: "
+                "the current working dir will be used")
         self.simulation_base_path = _os.path.join(self.base_path, simulation.run_id)
         self._variables_array_path = _os.path.join(self.simulation_base_path, "variables")
         self._attributes_array_name = _os.path.join(self.simulation_base_path, "attributes")
@@ -340,8 +347,8 @@ class Writer(object):
     def get_tiledb_context(self):
         if not self._tiledb_ctx:
             params = {}
-            if "hdfs" in self.config["persistence"]:
-                config = self.config["persistence"]["hdfs"]
+            if "hdfs" in self.config["persistence"]["out_data"]:
+                config = self.config["persistence"]["out_data"]["hdfs"]
                 params["vfs.hdfs.username"] = config['user']
                 params["vfs.hdfs.name_node_uri"] = config['namenode_uri']
             self._tiledb_ctx = _tdb.Ctx(params)
