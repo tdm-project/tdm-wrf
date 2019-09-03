@@ -116,36 +116,18 @@ class Simulation(object):
         super().__init__()
         self._config_filepath = config_filepath
         self._datafiles = set()
-        self._wrf_configuration = None
         self._global_configuration = None
 
     def _load_general_configuration(self):
-        with open(self._config_filepath) as f:
-            self._global_configuration = _json.load(f)
-            load_hdfs_configutarion(self._global_configuration)
-            _logger.debug("Loaded configuration: %s", _json.dumps(
-                self._global_configuration, indent=4, sort_keys=True))
-
-    # load json configuration
-    def load_wrf_configuration(self, wait_for_data=False):
-        simulation_file_path = _os.path.join(self.run_dir, WRF_CONFIG_FILE)
-        _logger.debug("Loading configuration file: %s", simulation_file_path)
-        with open(simulation_file_path, 'r') as stream:
-            self._wrf_configuration = _yaml.safe_load(stream)
-            _logger.debug("Loaded wrf configuration: %s",
-                          _json.dumps(self.wrf_configuration, indent=4, sort_keys=True))
+        self._global_configuration = _load_yaml_file(self._config_filepath)
+        load_hdfs_configutarion(self._global_configuration)
+        _logger.debug("Loaded configuration: %s", _json.dumps(self._global_configuration, indent=4, sort_keys=True))
 
     @property
     def configuration(self):
         if not self._global_configuration:
             self._load_general_configuration()
         return self._global_configuration
-
-    @property
-    def wrf_configuration(self):
-        if not self._wrf_configuration:
-            self._load_general_configuration()
-        return self._wrf_configuration
 
     def wait_for_data(self):
         while not _os.path.exists(self.run_dir):
@@ -157,25 +139,25 @@ class Simulation(object):
 
     @property
     def run_dir(self):
-        return self.configuration['data']
+        return self.configuration['persistence']['run_data']['path']
 
     @property
     def data_dir(self):
-        return self.configuration['results']
+        return self.configuration['persistence']['out_data']['path']
 
     @property
     def time_step(self):
-        return self.wrf_configuration['global']['running']['time_step']
+        return self.configuration['global']['running']['time_step']
 
     @property
     def domains(self) -> list:
-        return self.wrf_configuration["domains"].keys()
+        return self.configuration["domains"].keys()
 
     def geometry(self, domain='base') -> tuple:
-        return self.wrf_configuration['domains'][domain]['geometry']
+        return self.configuration['domains'][domain]['geometry']
 
     def frames_per_outfile(self, domain: object = 'base') -> int:
-        return self.wrf_configuration['domains'][domain]['running']['output']['frames_per_outfile']
+        return self.configuration['domains'][domain]['running']['output']['frames_per_outfile']
 
     def get_master_log_file(self):
         # TODO: check whether file pattern is OK
