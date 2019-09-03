@@ -64,9 +64,13 @@ def get_replica_id():
 
 
 def _get_logs_dir(config):
-    logs_dir = config["persistence"]["logs_dir"] \
-        if "persistence" in config and "logs_dir" in config["persistence"] \
-        else _os.path.join(_os.getcwd(), "logs")
+    try:
+        logs_dir = config["persistence"]["log_data"]["path"]
+    except KeyError as e:
+        _logger.exception(e)
+        _logger.warning("persistence.log_data.path not found on configuration file: "
+                        "the PWD/logs will be used!")
+        logs_dir = _os.path.join(_os.getcwd(), "logs")
     return logs_dir
 
 
