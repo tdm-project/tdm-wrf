@@ -92,20 +92,6 @@ def _setup_logger(name, log_file, level=None):
     return logger
 
 
-# load hdfs configuration
-# we assume the HADOOP_CONF_DIR is set
-def load_hdfs_configutarion(configuration):
-    # TODO: fix static HDFS configuration
-    # conf_dir = _os.environ["HADOOP_CONF_DIR"]
-    # hdfs_conf = _os.path.join(conf_dir, HDFS_SITE_XML)
-    # if not _os.path.exists(HDFS_SITE_XML):
-    #     raise "Unable to find hdfs configuration, i.e., '%s'".format(hdfs_conf)
-
-    # root = ET.parse(hdfs_conf).getroot()
-    # configuration["hdfs"]["namenode_uri"] =
-    pass
-
-
 def _to_datetime(date_time_str):
     return _datetime.datetime.strptime(date_time_str, "%Y-%m-%d_%H:%M:%S")
 
@@ -120,7 +106,6 @@ class Simulation(object):
 
     def _load_general_configuration(self):
         self._global_configuration = _load_yaml_file(self._config_filepath)
-        load_hdfs_configutarion(self._global_configuration)
         _logger.debug("Loaded configuration: %s", _json.dumps(self._global_configuration, indent=4, sort_keys=True))
 
     @property
