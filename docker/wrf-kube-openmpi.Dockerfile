@@ -24,11 +24,16 @@ ENV NEST  ${NEST:-0}
 RUN yum -y update \
     && yum -y install \
         netcdf-openmpi-devel.x86_64 \
+        netcdf-fortran-openmpi-devel.x86_64 \
+        netcdf-fortran-openmpi.x86_64 \
         hdf5-openmpi.x86_64 \
         openmpi.x86_64 openmpi-devel.x86_64 \
         openssh-clients openssh-server net-tools ca-certificates \
     && rm -rf /var/cache/yum \
-    && rm -rf /var/tmp/yum-*
+    && rm -rf /var/tmp/yum-* \
+    && rm -rf netcdf_links && mkdir netcdf_links \
+    && ln -sf /usr/include/openmpi-x86_64/ netcdf_links/include \
+    && ln -sf /usr/lib64/openmpi/lib netcdf_links/lib
 
 # Update environment
 ENV LD_LIBRARY_PATH /usr/lib64/openmpi/lib:${LD_LIBRARY_PATH}
