@@ -145,6 +145,8 @@ spec:
             - name: LOG_DATA
               value: {{ .Values.persistence.log_data.path }}
           volumeMounts:
+            - name: config-data-volume
+              mountPath: {{ .Values.persistence.config_data.path }}
             - name: run-data-volume
               mountPath: {{ .Values.persistence.run_data.path }}
             - name: out-data-volume
@@ -186,6 +188,8 @@ spec:
           ports:
             - containerPort: 2022
           volumeMounts:
+            - name: config-data-volume
+              mountPath: {{ .Values.persistence.config_data.path }}
             - name: run-data-volume
               mountPath: {{ .Values.persistence.run_data.path }}
             - name: out-data-volume
