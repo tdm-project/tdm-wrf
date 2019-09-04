@@ -1,0 +1,97 @@
+global:
+  timespan:
+    start:
+      year: "2019"
+      month: "9"
+      day: "1"
+      hour: "0"
+    end:
+      year: "2019"
+      month: "9"
+      day: "1"
+      hour: "6"
+
+  geometry:
+    ref_lat: 40.21
+    ref_lon:  9.00
+    truelat1: 38.00
+    truelat2: 42.00
+    stand_lon: 9.00
+    map_proj: 'lambert'
+    geog_data_path: '/geo/'
+    geog_name: "geog_low_res_mandatory"
+    request_resolution: "1p00"    
+    gfs_data: "/gfs/model_data"
+
+  real:
+    # number of vertical levels in WPS
+    # output (type ncdump -h on one of
+    # the met_em* files to find out this
+    # number)
+    num_metgrid_levels: 34
+    num_metgrid_soil_levels: 4
+    # this option selects the V3 standard
+    auto_levels_opt: 1
+
+  running:
+    processes: 2
+    processes_per_worker: 1
+    input:
+      interval_seconds: 10800
+    time_step: 60.0
+    history:
+      io_form: 102
+      outname: /data/out/wrfout_d<domain>_<date>.nc
+    skip:
+      prepare_wd: true
+      geo_fetch: true
+      gfs_fetch: true
+      finalize: true
+    
+
+  physics:
+    num_soil_layers: 4
+    num_land_cat: 21
+    
+domains:
+  base:
+    geometry:
+      geog_data_res: 'lowres'
+#      geog_data_res: '2deg+gtopo_10m+usgs_10m+10m+nesdis_greenfrac'
+      dx: 12000
+      dy: 12000
+      e_we: 51
+      e_sn: 101
+    running:
+      history:
+        interval: 60 # mins
+      output:
+        frames_per_outfile: 10
+
+
+persistence:
+  createPVC: true
+  enable_writer: false
+  config_data:
+    path: "/data/config"
+  init_data: 
+    path: "/data/init"
+    storage: 10Mi
+  log_data:
+    path: "/data/log"
+    storage: 10Mi
+    log_level: INFO
+  run_data:
+    path: "/data/run"
+    storage: 10Mi
+  out_data:
+    path: "/data/out"
+    variables: 'P'
+    attributes: ''
+    #storage: 10Mi # ignore when HDFS is enabled
+    hdfs:
+      user: "root"
+      base_dir: "/wrf/simulations"
+      namenode_uri: "hdfs://172.30.10.95:30820"
+      configMap: "tailored-parrot-hdfs-config"
+      

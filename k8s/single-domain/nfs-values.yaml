@@ -1,0 +1,8 @@
+persistence:
+  enabled: true
+  storageClass: "cinder-delete"
+  size: 100Gi
+
+storageClass:
+  create: true
+  reclaimPolicy: Delete
