@@ -52,6 +52,7 @@ spec:
           command: [
             "tdm", "gfs_fetch",
             "--debug",
+            "--overwrite",
             "--protocol", "http",
             "--year", "{{ .Values.global.timespan.start.year }}",
             "--month", "{{ .Values.global.timespan.start.month }}",
