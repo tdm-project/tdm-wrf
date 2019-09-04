@@ -165,6 +165,7 @@ spec:
             {{ end }}
           resources:
               {{ toYaml .Values.mpiWorkers.resources | indent 10 }}              
+        {{- if .Values.persistence.enable_writer }}
         - name: data-writer
           image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
           imagePullPolicy: {{ .Values.mpiDataWriterImage.pullPolicy }}
@@ -203,6 +204,7 @@ spec:
               mountPath: {{ .mountPath }}
               {{ if .subPath }}subPath: {{.subPath}} {{ end }}
             {{- end }}      
+        {{ end }}  
       {{- with .Values.mpiWorkers.nodeSelector }}
       nodeSelector:
             {{ toYaml . | indent 8 }}
