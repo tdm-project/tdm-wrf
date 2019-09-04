@@ -33,24 +33,30 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-run-data-claim
       initContainers:
-        # - name: wait-for-wrf-data-init-1
-        #   image: "groundnuty/k8s-wait-for:latest"
-        #   imagePullPolicy: "Always"
-        #   args: [
-        #     "job", "{{.Release.Name}}-wrf-init-job-1a-prepare-wd"
-        #   ]
+        {{- if not .Values.global.running.skip.prepare_wd }}
+        - name: wait-for-wrf-data-init-1
+          image: "groundnuty/k8s-wait-for:latest"
+          imagePullPolicy: "Always"
+          args: [
+            "job", "{{.Release.Name}}-wrf-init-job-1a-prepare-wd"
+          ]
+        {{ end }}
+        {{- if not .Values.global.running.skip.geo_fetch }}
         - name: wait-for-wrf-data-init-2
           image: "groundnuty/k8s-wait-for:latest"
           imagePullPolicy: "Always"
           args: [            
             "job", "{{.Release.Name}}-wrf-init-job-1b-geo-fetch"
           ]
+        {{ end }}
+        {{- if not .Values.global.running.skip.gfs_fetch }}
         - name: wait-for-wrf-data-init-3
           image: "groundnuty/k8s-wait-for:latest"
           imagePullPolicy: "Always"
           args: [
             "job", "{{.Release.Name}}-wrf-init-job-1c-gfs-fetch"
           ]
+        {{ end }}
       containers:
         # DEBUG container
         # - name: shell
