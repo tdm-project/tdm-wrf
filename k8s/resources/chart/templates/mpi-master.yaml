@@ -189,6 +189,8 @@ spec:
          "{{ .Values.global.running.processes_per_worker }}"
         ]
       volumeMounts:
+        - name: config-data
+          mountPath: {{ .Values.persistence.config_data.path }}
         - name: run-data
           mountPath: {{ .Values.persistence.run_data.path }}
         - name: out-data
@@ -237,6 +239,8 @@ spec:
       ports:
         - containerPort: 2022
       volumeMounts:
+        - name: config-data
+          mountPath: {{ .Values.persistence.config_data.path }}
         - name: run-data
           mountPath: {{ .Values.persistence.run_data.path }}
         - name: out-data
