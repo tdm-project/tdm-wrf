@@ -124,7 +124,14 @@ class Simulation(object):
 
     @property
     def run_id(self):
-        return self.configuration['run_id']
+        try:
+            return self.configuration['global']['running']['id']
+        except KeyError:
+            _logger.warning("Property 'global.running.id' not found in the configuration file."
+                            "A random number will be used.")
+            run_id = str(_time.time())
+            self.configuration['global']['running']['id'] = run_id
+            return run_id
 
     @property
     def run_dir(self):
