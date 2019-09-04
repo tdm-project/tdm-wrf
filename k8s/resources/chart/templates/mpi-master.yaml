@@ -130,7 +130,23 @@ spec:
         - name: kube-openmpi-hostfile-dir
           mountPath: /kube-openmpi/generated
         - name: kube-openmpi-utils
-          mountPath: /kube-openmpi/utils    
+          mountPath: /kube-openmpi/utils
+    - name: run-data-cleaner
+      image: "{{ .Values.wrfInitializerImage.repository }}:{{ .Values.wrfInitializerImage.tag }}"
+      imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
+      command: ['/bin/sh', '-c']
+      args:
+        - rm -Rf ${LOG_DATA}/${HOSTNAME} ${RUN_DATA}/rsl.*
+      env:
+        - name: RUN_DATA
+          value: {{ .Values.persistence.run_data.path }}
+        - name: LOG_DATA
+          value: {{ .Values.persistence.log_data.path }}
+      volumeMounts:
+        - name: run-data
+          mountPath: {{ .Values.persistence.run_data.path }}
+        - name: log-data
+          mountPath: {{ .Values.persistence.log_data.path }}
   containers:
     # DEBUG shell
     # - name: shell
