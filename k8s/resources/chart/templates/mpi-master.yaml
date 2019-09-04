@@ -179,15 +179,17 @@ spec:
         - name: OUT_DATA
           value: {{ .Values.persistence.out_data.path }}
         - name: LOG_DATA
-          value: {{ .Values.persistence.log_data.path }}              
+          value: {{ .Values.persistence.log_data.path }}
+      {{- if .Values.mpiMaster.oneShot.enabled }} 
         - name: ONE_SHOT
-          value: "true"      
+          value: "true"
       command: [
         "/init.sh", "run-wrf", 
         "{{ .Values.persistence.run_data.path }}", 
          "{{ .Values.global.running.processes }}",
          "{{ .Values.global.running.processes_per_worker }}"
-        ]
+        ]      
+      {{ end }}
       volumeMounts:
         - name: config-data
           mountPath: {{ .Values.persistence.config_data.path }}
