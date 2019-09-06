@@ -166,7 +166,7 @@ spec:
             {{ toYaml .Values.mpiWorkers.volumeMounts | indent 8 }}
             {{ end }}
           resources:
-              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}              
+              {{ toYaml .Values.mpiWorkers.resources | indent 10 }}
         {{- if .Values.persistence.enable_writer }}
         - name: data-writer
           image: "{{ .Values.mpiDataWriterImage.repository }}:{{ .Values.mpiDataWriterImage.tag }}"
