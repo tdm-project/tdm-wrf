@@ -38,7 +38,7 @@ mpiImage:
 
 mpiDataWriterImage:
   repository: kikkomep/kube-openmpi
-  tag: wrf_writer_3.2.0-ubuntu-1.6.0-0.4.3
+  tag: wrf_writer_3.2.0-ubuntu-1.6.2-0.4.3
   pullPolicy: Always
 
 networkPolicy:
