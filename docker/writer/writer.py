@@ -112,6 +112,7 @@ class Simulation(object):
         self._config_filepath = config_filepath
         self._datafiles = set()
         self._global_configuration = None
+        self._namelist = None
 
     def _load_general_configuration(self):
         self._global_configuration = _load_yaml_file(self._config_filepath)
@@ -168,7 +169,10 @@ class Simulation(object):
         return _os.path.join(self.run_dir, "namelist.input")
 
     def get_namelist(self):
-        return _f90nml.read(self.get_namelist_file())
+        if not self._namelist:
+            _logger.debug("Loading namelist.input...")
+            self._namelist = _f90nml.read(self.get_namelist_file())
+        return self._namelist
 
     def get_simulation_duration(self):
         # TODO: probably we need only the namelist.wps file
