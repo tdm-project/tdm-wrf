@@ -336,14 +336,19 @@ class Writer(object):
         self._dimensions = None
 
         # set variables to be skipped
-        self.variable_filter = self.simulation.configuration["variables"] \
-            if "variables" in self.simulation.configuration and len(self.simulation.configuration["variables"]) \
-            else None
+        self.variable_filter = None
+        try:
+            self.variable_filter = self.simulation.configuration["persistence"]["out_data"]["variables"].split(',')
+            _logger.debug("Variable filter: %r", self.variable_filter)
+        except KeyError:
+            _logger.warning("Variable filter empty")
 
         # set attributes to be skipped
-        self.attribute_filter = self.simulation.configuration["attributes"] \
-            if "attributes" in self.simulation.configuration and len(self.simulation.configuration["attributes"]) \
-            else None
+        try:
+            self.attribute_filter = self.simulation.configuration["persistence"]["out_data"]["attributes"].split(',')
+            _logger.debug("Variable filter: %r", self.attribute_filter)
+        except KeyError:
+            _logger.warning("Attribute filter empty")
 
         # define name of arrays
         try:
@@ -455,6 +460,11 @@ class Writer(object):
 
         for cname, var in ncdata.variables.items():
 
+            if self.variable_filter and cname not in self.variable_filter:
+                self.logger.info("Skipping variable %s", cname)
+                continue
+
+            self.logger.info("Initializing arrays for variable '%s'...", cname)
             # store variable attributes (as KV)
             attributes_array_name = _os.path.join(self._attributes_array_name, cname)
             attributes_schema = _tdb.KVSchema(attrs=[_tdb.Attr(name=cname, dtype=bytes, ctx=ctx)])
@@ -463,12 +473,8 @@ class Writer(object):
                 self.logger.info("Created array for attributes of variable %s", cname)
 
             # store variable data
-            skipped = []
             dom = _tdb.Domain(*list(map(lambda x: dimensions[x], var.dims)), ctx=ctx)
             self.logger.debug("Dom ndim %r" % dom.ndim)
-            if dom.ndim == 1:
-                skipped.append(cname)
-                continue
             self.logger.debug("Defining variable %s (%r)", cname, var.dtype)
             attribute = _tdb.Attr(name=cname, dtype=self._get_attribute_type(var.dtype), ctx=ctx)
             variable_schema = _tdb.ArraySchema(domain=dom, sparse=False, attrs=[attribute], ctx=ctx)
@@ -640,9 +646,6 @@ class Writer(object):
                     dom = self.get_domain(var)
                     self.logger.debug("Dom ndim %r" % dom.ndim)
 
-                    if dom.ndim == 1:
-                        skipped.append(cname)
-                        continue
 
                     # write array frame
                     self.write_array_frame(cname, frame, var, dom)
