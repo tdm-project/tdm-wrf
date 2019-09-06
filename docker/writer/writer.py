@@ -24,7 +24,7 @@ from multiprocessing import Process as _Process
 
 # set logger
 _logger = _logging.getLogger(__name__)
-_formatter = _logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+_formatter = _logging.Formatter('%(asctime)s %(levelname)5s %(name)s: %(message)s')
 
 # defaults
 COMMANDS = ("start", "wait")
@@ -87,12 +87,17 @@ def _load_yaml_file(file_path) -> object:
         return _yaml.safe_load(stream)
 
 
-def _setup_logger(name, log_file, level=None):
-    handler = _logging.FileHandler(log_file)
-    handler.setFormatter(_formatter)
+def _setup_logger(name, log_file=None, level=None, stdout=False):
     logger = _logging.getLogger(name)
+    if log_file:
+        handler = _logging.FileHandler(log_file)
+        handler.setFormatter(_formatter)
+        logger.addHandler(handler)
+    if stdout:
+        handler = _logging.StreamHandler(_sys.stdout)
+        handler.setFormatter(_formatter)
+        logger.addHandler(handler)
     logger.setLevel(_logger.getEffectiveLevel() if not level else level)
-    logger.addHandler(handler)
     return logger
 
 
