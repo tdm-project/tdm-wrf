@@ -581,22 +581,22 @@ class Writer(object):
         dimensions = self.get_dimensions()
         return _tdb.Domain(*list(map(lambda x: dimensions[x], var.dims)), ctx=ctx)
 
-    def get_slices(self, cname, dom, frame, var):
+    def get_slices(self, cname, dom, var):
         slices = []
-        step = self.simulation.to_step_number(self.datafile.datetime) + frame
-        time_slice = slice(step, step + 1)
         for ndim in range(0, dom.ndim):
             self.logger.debug("Variable name: %s", cname)
             self.logger.debug("Domain: %r", dom)
             self.logger.debug("Variable: %r", var)
             if dom.dim(ndim).name == "Time":
+                start_step = self.simulation.to_step_number(self.datafile.datetime)
+                time_slice = slice(start_step, start_step + len(var))
                 slices.append(time_slice)
                 self.logger.debug("Time slice %r", time_slice)
             else:
                 slices.append(self.datafile.get_slice_dimension_size(dom.dim(ndim).name))
         return slices
 
-    def write_array_frame(self, cname, frame, var, dom):
+    def write_variable_frames(self, cname, var, dom):
 
         ctx = self.get_tiledb_context()
 
@@ -606,7 +606,7 @@ class Writer(object):
 
         self.logger.debug("Defining variable %s (%r)", cname, var.dtype)
 
-        slices = self.get_slices(cname, dom, frame, var)
+        slices = self.get_slices(cname, dom, var)
 
         try:
             with _tdb.DenseArray(variable_array_name, 'w', ctx=ctx) as A:
@@ -641,7 +641,6 @@ class Writer(object):
         try:
 
             # represents dimensions
-            skipped = []
             self.logger.debug("Number of frames per outfile: %s", self.simulation.frames_per_outfile())
 
             for cname, var in ncdata.variables.items():
@@ -654,15 +653,11 @@ class Writer(object):
                 # write array attributes
                 self.write_array_attributes(var, cname)
 
-                for frame in range(self.simulation.frames_per_outfile()):
-                    self.logger.debug("Step: %d", frame)
-
-                    dom = self.get_domain(var)
-                    self.logger.debug("Dom ndim %r" % dom.ndim)
-
-
-                    # write array frame
-                    self.write_array_frame(cname, frame, var, dom)
+                # write array frame
+                dom = self.get_domain(var)
+                self.logger.debug("Dom ndim %r" % dom.ndim)
+                self.logger.info("Writing variable %s...", cname)
+                self.write_variable_frames(cname, var, dom)
 
         except Exception as e:
             self.logger.error(e)
