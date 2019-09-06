@@ -328,7 +328,7 @@ class Writer(object):
         logs_dir = _init_local_logs_dir(self.config)
         logs_filename = _os.path.join(logs_dir, self.name)
         _logger.debug("Logfile name for %s: %s", self.name, logs_filename)
-        self.logger = _setup_logger(self.name, logs_filename, _logger.getEffectiveLevel())
+        self.logger = _setup_logger(self.name, log_file=logs_filename, stdout=True, level=_logger.getEffectiveLevel())
 
         # tiledb commons
         self._tiledb_ctx = None
