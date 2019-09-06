@@ -206,7 +206,12 @@ class Simulation(object):
         domains = namelist["domains"]
 
         start_time = _datetime.datetime(*self._get_datetime_by_prefix(time_control, "start"))
-        return int((frame_datetime - start_time).seconds / 60 / domains["time_step"])
+        result = int((frame_datetime - start_time).seconds / 60 / domains["time_step"])
+        _logger.debug("Time control: %r", time_control)
+        _logger.debug("Datetime by prefix: %r", self._get_datetime_by_prefix(time_control, "start"))
+        _logger.debug("Start TIme: %r", start_time)
+        _logger.debug("TimeStep: %r", result)
+        return result
 
     def get_dimension_domains(self):
         namelist = self.get_namelist()
@@ -437,17 +442,17 @@ class Writer(object):
         self.logger.debug("Context configured!")
 
         # create KV array for global attributes
-        _logger.debug("Initializing global attributes array...")
+        self.logger.debug("Initializing global attributes array...")
         attributes_schema = _tdb.KVSchema(attrs=[_tdb.Attr(name="global_attribute", dtype=bytes, ctx=ctx)])
         _tdb.KV.create(self.global_attributes_array_name, attributes_schema, ctx=ctx)
         self.logger.info("Created global attributes array: %s", self.global_attributes_array_name)
         # create KV array for dimensions
-        _logger.debug("Initializing global dimensions array...")
+        self.logger.debug("Initializing global dimensions array...")
         dimensions_schema = _tdb.KVSchema(attrs=[_tdb.Attr(name="dimension", dtype=bytes, ctx=ctx)])
         _tdb.KV.create(self.dimensions_array_name, dimensions_schema, ctx=ctx)
         self.logger.info("Created dimensions array: %s", self.dimensions_array_name)
         # create KV array for coords
-        _logger.debug("Initializing global coords array...")
+        self.logger.debug("Initializing global coords array...")
         coords_schema = _tdb.KVSchema(attrs=[_tdb.Attr(name="coord", dtype=bytes, ctx=ctx)])
         _tdb.KV.create(self.coords_array_name, coords_schema, ctx=ctx)
         self.logger.info("Created coords array: %s", self.coords_array_name)
@@ -455,8 +460,10 @@ class Writer(object):
         # represents dimensions
         ncdata = self.datafile.data
         dimension_info = self.simulation.get_dimension_domains()
+        self.logger.debug("Dimension info: %r", dimension_info)
         dimensions = {dim: _tdb.Dim(dim, domain=dimension_info[dim], dtype=_np.int32, tile=size)
                       for dim, size in ncdata.dims.items()}
+        self.logger.debug("dimensions: %r", dimensions)
 
         for cname, var in ncdata.variables.items():
 
@@ -465,8 +472,11 @@ class Writer(object):
                 continue
 
             self.logger.info("Initializing arrays for variable '%s'...", cname)
+
             # store variable attributes (as KV)
             attributes_array_name = _os.path.join(self._attributes_array_name, cname)
+            self.logger.info("Initializing array "
+                             "for variable attributes '%s' (array: '%s')...", cname, attributes_array_name)
             attributes_schema = _tdb.KVSchema(attrs=[_tdb.Attr(name=cname, dtype=bytes, ctx=ctx)])
             if not _tdb.object_type(attributes_array_name, ctx=ctx):
                 _tdb.KV.create(attributes_array_name, attributes_schema, ctx=ctx)
@@ -474,12 +484,16 @@ class Writer(object):
 
             # store variable data
             dom = _tdb.Domain(*list(map(lambda x: dimensions[x], var.dims)), ctx=ctx)
+            variable_array_name = _os.path.join(self._variables_array_path, cname)
+            self.logger.info("Initializing array "
+                             "for variable '%s' (array: '%s')...", cname, variable_array_name)
+            self.logger.debug("Configuring variable %s", cname)
             self.logger.debug("Dom ndim %r" % dom.ndim)
+            self.logger.debug("Domain: %r", dom)
             self.logger.debug("Defining variable %s (%r)", cname, var.dtype)
             attribute = _tdb.Attr(name=cname, dtype=self._get_attribute_type(var.dtype), ctx=ctx)
             variable_schema = _tdb.ArraySchema(domain=dom, sparse=False, attrs=[attribute], ctx=ctx)
             self.logger.debug("Schema... %r", variable_schema)
-            variable_array_name = _os.path.join(self._variables_array_path, cname)
             if not _tdb.object_type(variable_array_name, ctx=ctx):
                 _tdb.DenseArray.create(variable_array_name, variable_schema)
                 self.logger.info("Created array for variable %s", cname)
@@ -602,9 +616,9 @@ class Writer(object):
                 A[tuple(slices)] = {cname: var.data}
         except Exception as e:
             self.logger.error(e)
-            _logger.error(e)
-            if _logger.isEnabledFor(_logging.DEBUG):
-                _logger.exception(e)
+            self.logger.error(e)
+            if self.logger.isEnabledFor(_logging.DEBUG):
+                self.logger.exception(e)
 
     def write_file_frames(self):
         self.logger.info("Triggered write frames on file '%s' @ start '%s'",
@@ -613,7 +627,7 @@ class Writer(object):
         ctx = self.get_tiledb_context()
         ncdata = self.datafile.data
 
-        _logger.debug("Is the first datafile: %s", self.datafile.is_first_data_file())
+        self.logger.debug("Is the first datafile: %s", self.datafile.is_first_data_file())
         if self.datafile.is_first_data_file():
             #
             self.initialize_arrays()
@@ -712,16 +726,13 @@ class WriterManager(object):
         _logger.debug("Current datafiles set: %r", current_set)
         new_datafiles = current_set.difference(self._datafiles)
         for f in current_set:
-            _logger.debug("%s in set".format(f) if f in self._datafiles else "%s not in set".format(f))
+            _logger.debug("{} in set".format(f) if f in self._datafiles else "{} not in set".format(f))
         _logger.debug("Set of new datafiles : %r", new_datafiles)
         return new_datafiles if len(new_datafiles) > 0 else None
 
     @staticmethod
     def to_data_files_map(datafile_names):
         data_files = list(map(lambda x: DataFile(x), datafile_names))
-        # _logger.debug("Input to map: %r", datafile_names)
-        # for f in data_files:
-        #     _logger.debug("Process %s (domain %s): %r",  f.process, f.domain, f.filename)
         data_file_map = {
             p: {
                 d: sorted(list(filter(lambda z: z.process == p and z.domain == d, data_files)),
@@ -767,6 +778,7 @@ class WriterManager(object):
                 # _logger.info("Writer %s started", writer.name)
                 raise Exception("Multiprocessing unsupported yet!!!")
             else:
+                _logger.debug("Is the first datafile: %s", writer.datafile.is_first_data_file())
                 writer.write_file_frames()
                 self._update_datafile_checkpoint(writer.datafile.filename, True)
                 _logger.info("Writer %s finished!", writer.name)
