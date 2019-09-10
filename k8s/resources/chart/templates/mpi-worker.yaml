@@ -150,7 +150,7 @@ spec:
             - name: run-data-volume
               mountPath: {{ .Values.persistence.run_data.path }}
             - name: out-data-volume
-              mountPath: {{ .Values.persistence.out_data.path }}
+              mountPath: {{ .Values.persistence.out_data.source_path }}
             - name: log-data-volume
               mountPath: {{ .Values.persistence.log_data.path }}
             - name: kube-openmpi-ssh-key
@@ -193,7 +193,7 @@ spec:
             - name: run-data-volume
               mountPath: {{ .Values.persistence.run_data.path }}
             - name: out-data-volume
-              mountPath: {{ .Values.persistence.out_data.path }}
+              mountPath: {{ .Values.persistence.out_data.source_path }}
             - name: log-data-volume
               mountPath: {{ .Values.persistence.log_data.path }}
             - name: kube-openmpi-ssh-key

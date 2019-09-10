@@ -177,7 +177,7 @@ spec:
         - name: RUN_DATA
           value: {{ .Values.persistence.run_data.path }}
         - name: OUT_DATA
-          value: {{ .Values.persistence.out_data.path }}
+          value: {{ .Values.persistence.out_data.source_path }}
         - name: LOG_DATA
           value: {{ .Values.persistence.log_data.path }}
       {{- if .Values.mpiMaster.oneShot.enabled }} 
@@ -196,7 +196,7 @@ spec:
         - name: run-data
           mountPath: {{ .Values.persistence.run_data.path }}
         - name: out-data
-          mountPath: {{ .Values.persistence.out_data.path }}
+          mountPath: {{ .Values.persistence.out_data.source_path }}
         - name: log-data
           mountPath: {{ .Values.persistence.log_data.path }}
         - name: kube-openmpi-guillotine
@@ -229,7 +229,7 @@ spec:
         - name: RUN_DATA
           value: {{ .Values.persistence.run_data.path }}
         - name: OUT_DATA
-          value: {{ .Values.persistence.out_data.path }}
+          value: {{ .Values.persistence.out_data.source_path }}
         - name: LOG_DATA
           value: {{ .Values.persistence.log_data.path }}
       command: ['/bin/bash', '-l', '-c']
@@ -246,7 +246,7 @@ spec:
         - name: run-data
           mountPath: {{ .Values.persistence.run_data.path }}
         - name: out-data
-          mountPath: {{ .Values.persistence.out_data.path }}
+          mountPath: {{ .Values.persistence.out_data.source_path }}
         - name: log-data
           mountPath: {{ .Values.persistence.log_data.path }}
         - name: kube-openmpi-ssh-key
