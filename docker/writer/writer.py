@@ -845,8 +845,6 @@ class WriterManager(object):
         :param simulation:
         :return:
         """
-        # set base logs folder
-        logs_dir = _get_logs_dir(self.simulation.configuration)
         # wait until simulation has finished!
         _logger.info("Waiting for simulation to finish...")
         while not self.simulation.check_simulation_completed():
@@ -865,6 +863,8 @@ def _make_parser():
     parser.add_argument('-f', '--file', default=DEFAULT_CONFIG_FILENAME,
                         help='Path the of json configuration of the experiment)'.format(DEFAULT_CONFIG_FILENAME))
     parser.add_argument('--debug', help='Enable debug mode',
+                        action='store_true', default=None)
+    parser.add_argument('--master', help='Run as master writer',
                         action='store_true', default=None)
     parser.add_argument('-m', '--multiprocessing', help='Enable multiprocessing for parallel writes',
                         action='store_true', default=False)
@@ -901,11 +901,22 @@ def main():
         if options.cmd == COMMANDS[0]:
             mgt = WriterManager(simulation)
             mgt.start_writers(options.multiprocessing)
+            if options.master:
+                mgt.wait_for_finish()
+                # set base logs folder
+                logs_dir = _get_logs_dir(simulation.configuration)
+                # write __SUCCESS__ flag file
+                _logger.debug("Writing __SUCCESS__ semaphore file...")
+                with open(_os.path.join(logs_dir, "__SUCCESS__"), "w") as f:
+                    f.write("")
+                _logger.debug("__SUCCESS__ semaphore file written !!!")
+            _time.sleep(3600)
         elif options.cmd == COMMANDS[1]:
             mgt = WriterManager(simulation)
             mgt.wait_for_finish()
         else:
             _logger.error("Unsupported command ", options.cmd)
+            _sys.exit(99)
 
     except KeyboardInterrupt:
         _logger.info("Interrupted by user")
