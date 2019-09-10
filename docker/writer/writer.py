@@ -145,7 +145,7 @@ class Simulation(object):
 
     @property
     def data_dir(self):
-        return self.configuration['persistence']['out_data']['path']
+        return self.configuration['persistence']['out_data']['source_path']
 
     @property
     def time_step(self):
@@ -357,14 +357,21 @@ class Writer(object):
 
         # define name of arrays
         try:
-            self.base_path = self.config["persistence"]["out_data"]["path"] \
-                if "persistence" in self.config else _os.getcwd()
+            self.base_path = self.config["persistence"]["out_data"]["target_path"]
         except KeyError as e:
             _logger.exception(e)
             _logger.warning(
                 "'persistence.out_data.path' not found on WRF configuration file: "
                 "the current working dir will be used")
+            self.base_path = _os.getcwd()
+
+        # set hdfs:// prefix to the base_path
+        if "hdfs" in self.simulation.configuration["persistence"]["out_data"]:
+            self.base_path = "hdfs://{}".format(self.base_path)
+
+        # set the base path for writing simulation output as TileDB arrays
         self.simulation_base_path = _os.path.join(self.base_path, simulation.run_id)
+        # define TileDB array names
         self._variables_array_path = _os.path.join(self.simulation_base_path, "variables")
         self._attributes_array_name = _os.path.join(self.simulation_base_path, "attributes")
         self._dimensions_array_name = _os.path.join(self.simulation_base_path, "dimensions")
@@ -813,7 +820,8 @@ class WriterManager(object):
                 if not self._check_for_new_datafiles():
                     _logger.info("No new file found: writer has finished!")
                     self._update_checkpoint(True)
-                    _time.sleep(3600)
+                    # _time.sleep(3600)
+                    break
 
             # wait before checking for new datafile
             _time.sleep(5)
