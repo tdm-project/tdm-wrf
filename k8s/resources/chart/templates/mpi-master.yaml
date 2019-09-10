@@ -283,6 +283,12 @@ spec:
           return_code=$(cat $GUILLOTINE/execute)
           echo Exit code: $return_code
           if [ "$return_code" = 0 ]; then
+            until [[ -e "{{ .Values.persistence.log_data.path }}/__SUCCESS__" ]]; \
+            do 
+              echo "Waiting for data-writer to finish...";
+              sleep 5;
+            done  
+            echo "All writers have finished... terminating workers"
             kubectl -n {{ .Release.Namespace }} scale statefulsets {{ .Release.Name }}-worker --replicas=0
           fi
           echo Done.
@@ -292,6 +298,8 @@ spec:
       volumeMounts:
         - name: kube-openmpi-guillotine
           mountPath: /kube-openmpi/guillotine
+        - name: log-data
+          mountPath: {{ .Values.persistence.log_data.path }}
     {{ end }}
     {{ end }}
     {{ if .Values.mpiMaster.autoUpdateHostfile.enabled }}
