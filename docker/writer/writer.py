@@ -910,7 +910,9 @@ def main():
                 with open(_os.path.join(logs_dir, "__SUCCESS__"), "w") as f:
                     f.write("")
                 _logger.debug("__SUCCESS__ semaphore file written !!!")
-            _time.sleep(3600)
+            else:
+                # keep waiting if writer is not a master
+                _time.sleep(3600)
         elif options.cmd == COMMANDS[1]:
             mgt = WriterManager(simulation)
             mgt.wait_for_finish()
