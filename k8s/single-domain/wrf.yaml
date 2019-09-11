@@ -3,12 +3,12 @@ global:
     start:
       year: "2019"
       month: "9"
-      day: "1"
+      day: "9"
       hour: "0"
     end:
       year: "2019"
       month: "9"
-      day: "1"
+      day: "9"
       hour: "6"
 
   geometry:
@@ -34,6 +34,7 @@ global:
     auto_levels_opt: 1
 
   running:
+    id: "single-domain"
     processes: 2
     processes_per_worker: 1
     input:
@@ -43,10 +44,10 @@ global:
       io_form: 102
       outname: /data/out/wrfout_d<domain>_<date>.nc
     skip:
-      prepare_wd: true
-      geo_fetch: true
-      gfs_fetch: true
-      finalize: true
+      prepare_wd: false
+      geo_fetch: false
+      gfs_fetch: false
+      finalize: false
     
 
   physics:
@@ -71,7 +72,7 @@ domains:
 
 persistence:
   createPVC: true
-  enable_writer: false
+  enable_writer: true
   config_data:
     path: "/data/config"
   init_data: 
@@ -85,13 +86,12 @@ persistence:
     path: "/data/run"
     storage: 10Mi
   out_data:
-    path: "/data/out"
+    source_path: "/data/out"
+    target_path: "/wrf/simulations" 
     variables: 'P'
     attributes: ''
     #storage: 10Mi # ignore when HDFS is enabled
     hdfs:
       user: "root"
-      base_dir: "/wrf/simulations"
       namenode_uri: "hdfs://172.30.10.95:30820"
       configMap: "tailored-parrot-hdfs-config"
-      
