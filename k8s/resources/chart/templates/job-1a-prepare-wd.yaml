@@ -38,7 +38,7 @@ spec:
       initContainers:
         - name: fix-permissions
           image: "alpine:latest"
-          imagePullPolicy: "{{ .Values.tdmToolImage.pullPolicy }}"
+          imagePullPolicy: "IfNotPresent"
           command: ["/bin/sh","-c"]
           args: ["mkdir -p {{ .Values.persistence.run_data.path }} && rm -Rf ${RUN_DATA}/* && chmod -R a+rw {{ .Values.persistence.run_data.path }}"]          
           env:
