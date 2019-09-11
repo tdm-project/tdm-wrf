@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# set config
+CONFIG_DIR=${1:-"../single-domain"}
+
 # load config
-source ./config.sh
+RUN_ID=$(basename ${CONFIG_DIR})
+MPI_CLUSTER_NAME=tdm-stage-openmpi-${RUN_ID}
+KUBE_NAMESPACE=openmpi
+VALUES_PATH="${CONFIG_DIR}"
+
 
 # use resources as working-dir
 cd resources || exit 99
@@ -14,10 +21,17 @@ helm template chart \
      -f "${VALUES_PATH}/wrf.yaml" \
      -f ssh-key.yaml | kubectl -n "${KUBE_NAMESPACE}" delete -f -
 
-kubectl delete cm --namespace "${KUBE_NAMESPACE}" "${MPI_CLUSTER_NAME}-config-data"
+# wait until $MPI_CLUSTER_NAME-master is ready
+until [[ ! $(kubectl get pods -n "${KUBE_NAMESPACE}" | grep "${MPI_CLUSTER_NAME}-master") ]]; do
+  date
+  sleep 10
+  echo "Waiting for master to finish..."
+done
 
-# delete storage class
-kubectl delete sc nfs-${MPI_CLUSTER_NAME}
+#kubectl delete cm --namespace "${KUBE_NAMESPACE}" "${MPI_CLUSTER_NAME}-config-data"
 
-# delete the namespace
+# # delete the namespace
 kubectl delete namespace ${KUBE_NAMESPACE}
+
+# # delete storage class
+kubectl delete sc nfs-${MPI_CLUSTER_NAME}
