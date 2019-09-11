@@ -1,28 +1,28 @@
 
-wrfInitializerImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_initializer
-  pullPolicy: Always
+# wrfInitializerImage:
+#   repository: kikkomep/kube-openmpi
+#   tag: wrf_initializer
+#   pullPolicy: Always
 
-wrfPopulateImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_populate
-  pullPolicy: Always
+# wrfPopulateImage:
+#   repository: kikkomep/kube-openmpi
+#   tag: wrf_populate
+#   pullPolicy: Always
 
-wrfWpsImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_wps
-  pullPolicy: Always
+# wrfWpsImage:
+#   repository: kikkomep/kube-openmpi
+#   tag: wrf_wps
+#   pullPolicy: Always
 
-wrfWrfImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_wrf
-  pullPolicy: Always
+# wrfWrfImage:
+#   repository: kikkomep/kube-openmpi
+#   tag: wrf_wrf
+#   pullPolicy: Always
 
-tdmToolImage:
-  repository: kikkomep/tdm-tools
-  tag: latest
-  pullPolicy: Always
+# tdmToolImage:
+#   repository: kikkomep/tdm-tools
+#   tag: latest
+#   pullPolicy: Always
 
 wrfDataInitImage:
   repository: kikkomep/kube-openmpi
@@ -33,8 +33,6 @@ mpiImage:
   repository: kikkomep/kube-openmpi
   tag: wrf_4.0.3-1.10.7-centos7-0.7.0
   pullPolicy: Always
-  # pullSecrets:
-  # - name: ""
 
 mpiDataWriterImage:
   repository: kikkomep/kube-openmpi
