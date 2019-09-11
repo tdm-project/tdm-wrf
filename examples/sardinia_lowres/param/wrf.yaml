@@ -33,18 +33,20 @@ global:
     auto_levels_opt: 1
 
   running:
-    processes: 8
-    processes_per_worker: 4
+    id: "sardinia-low-res"
+    processes: 2
+    processes_per_worker: 1
     input:
       interval_seconds: 10800
     time_step: 60.0
     history:
-      outname: /run/data/wrfout_d<domain>_<date>.nc
+      io_form: 102
+      outname: /data/out/wrfout_d<domain>_<date>.nc
     skip:
-      prepare_wd: true
-      geo_fetch: true
-      gfs_fetch: true
-      finalize: true
+      prepare_wd: false
+      geo_fetch: false
+      gfs_fetch: false
+      finalize: false
   physics:
     num_soil_layers: 4
     num_land_cat: 21  
@@ -71,7 +73,9 @@ domains:
       e_sn: 101
     running:
       history:
-        interval: 60 # mins
+        interval: 60 # mins                
+      output:
+        frames_per_outfile: 10
         
   # a nested domain
   sardinia:
@@ -85,8 +89,10 @@ domains:
     running:
       parent_time_step_ratio: 3
 
+
 persistence:
-  createPVC: false
+  createPVC: true
+  enable_writer: false
   config_data:
     path: "/data/config"
   init_data: 
@@ -100,13 +106,13 @@ persistence:
     path: "/data/run"
     storage: 10Mi
   out_data:
-    path: "/data/out"
+    source_path: "/data/out"
+    target_path: "/wrf/simulations"
     variables: 'P'
     attributes: ''
     #storage: 10Mi # ignore when HDFS is enabled
     hdfs:
-      user: "root"
-      base_dir: "/wrf/simulations"
+      user: "root"      
       namenode_uri: "hdfs://172.30.10.95:30820"
       configMap: "tailored-parrot-hdfs-config"
       
