@@ -133,7 +133,22 @@ spec:
           imagePullPolicy: "Always"
           args: ["job", "{{.Release.Name}}-wrf-init-job-2-finalize-wd"]
         {{- end }}
-      containers:
+      containers:      
+        {{ if .Values.mpiMaster.debug_shell }}
+        - name: shell
+          image: "{{ .Values.wrfInitializerImage.repository }}:{{ .Values.wrfInitializerImage.tag }}"
+          imagePullPolicy: "{{ .Values.mpiDataWriterImage.pullPolicy }}"
+          command: ["/bin/sleep","{{default "3600" .Values.sleepyTime}}"]
+          volumeMounts:
+            - name: config-data-volume
+              mountPath: {{ .Values.persistence.config_data.path }}
+            - name: run-data-volume
+              mountPath: {{ .Values.persistence.run_data.path }}
+            - name: out-data-volume
+              mountPath: {{ .Values.persistence.out_data.source_path }}
+            - name: log-data-volume
+              mountPath: {{ .Values.persistence.log_data.path }}
+        {{ end }}
         - name: mpi-worker
           image: "{{ .Values.mpiImage.repository }}:{{ .Values.mpiImage.tag }}"
           imagePullPolicy: {{ .Values.mpiImage.pullPolicy }}
