@@ -33,6 +33,7 @@ global:
     auto_levels_opt: 1
 
   running:
+    id: "sardinia-low-res"
     processes: 2
     processes_per_worker: 1
     input:
@@ -105,13 +106,13 @@ persistence:
     path: "/data/run"
     storage: 10Mi
   out_data:
-    path: "/data/out"
+    source_path: "/data/out"
+    target_path: "/wrf/simulations"
     variables: 'P'
     attributes: ''
     #storage: 10Mi # ignore when HDFS is enabled
     hdfs:
-      user: "root"
-      base_dir: "/wrf/simulations"
+      user: "root"      
       namenode_uri: "hdfs://172.30.10.95:30820"
       configMap: "tailored-parrot-hdfs-config"
       
