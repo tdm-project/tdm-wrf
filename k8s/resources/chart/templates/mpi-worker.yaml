@@ -182,7 +182,7 @@ spec:
           args:
             #- /entrypoint.sh python3 writer.py --debug -m -f ${CONFIG_DATA}/config.json start
             #- /entrypoint.sh /usr/bin/tail -f /dev/null
-            - /entrypoint.sh python3 $(which writer.py) --debug -f ${CONFIG_DATA}/wrf.yaml start
+            - /entrypoint.sh python3 $(which writer.py) --debug --keep-waiting 3600 -f ${CONFIG_DATA}/wrf.yaml start
             #- /entrypoint.sh cat /etc/hosts
             #- sleep 10
           ports:

@@ -236,7 +236,7 @@ spec:
       args:
         #- /entrypoint.sh python3 app.py --debug -f ${CONFIG_DATA}/config.json start
         #- /entrypoint.sh /usr/bin/tail -f /dev/null
-        - /entrypoint.sh python3 $(which writer.py) --debug --master -f ${CONFIG_DATA}/wrf.yaml start
+        - /entrypoint.sh python3 $(which writer.py) --debug --write-success -f ${CONFIG_DATA}/wrf.yaml start
         #- /entrypoint.sh usr/bin/sleep 5
       ports:
         - containerPort: 2022

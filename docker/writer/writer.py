@@ -858,14 +858,13 @@ class WriterManager(object):
 
 def _make_parser():
     parser = _argparse.ArgumentParser(add_help=True)
-    parser.add_argument("cmd", metavar='CMD',
-                        help="Command", choices=COMMANDS)
+    parser.add_argument("cmd", metavar='CMD', help="Command", choices=COMMANDS)
     parser.add_argument('-f', '--file', default=DEFAULT_CONFIG_FILENAME,
                         help='Path the of json configuration of the experiment)'.format(DEFAULT_CONFIG_FILENAME))
     parser.add_argument('--debug', help='Enable debug mode',
                         action='store_true', default=None)
-    parser.add_argument('--master', help='Run as master writer',
-                        action='store_true', default=None)
+    parser.add_argument('--write-success', help='Write success file', action='store_true', default=None)
+    parser.add_argument('--keep-waiting', help='Keep writer waiting until timeout', default=None)
     parser.add_argument('-m', '--multiprocessing', help='Enable multiprocessing for parallel writes',
                         action='store_true', default=False)
     return parser
@@ -901,7 +900,7 @@ def main():
         if options.cmd == COMMANDS[0]:
             mgt = WriterManager(simulation)
             mgt.start_writers(options.multiprocessing)
-            if options.master:
+            if options.write_success:
                 mgt.wait_for_finish()
                 # set base logs folder
                 logs_dir = _get_logs_dir(simulation.configuration)
@@ -910,9 +909,9 @@ def main():
                 with open(_os.path.join(logs_dir, "__SUCCESS__"), "w") as f:
                     f.write("")
                 _logger.debug("__SUCCESS__ semaphore file written !!!")
-            else:
-                # keep waiting if writer is not a master
-                _time.sleep(3600)
+            # keep waiting
+            if options.keep_waiting:
+                _time.sleep(options.keep_waiting)
         elif options.cmd == COMMANDS[1]:
             mgt = WriterManager(simulation)
             mgt.wait_for_finish()
