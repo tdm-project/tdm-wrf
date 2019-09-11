@@ -73,6 +73,7 @@ domains:
 persistence:
   createPVC: true
   enable_writer: true
+  #storage_class: "my-storage-class"
   config_data:
     path: "/data/config"
   init_data: 
