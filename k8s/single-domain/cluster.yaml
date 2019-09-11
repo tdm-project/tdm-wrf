@@ -4,37 +4,10 @@ wrfInitializerImage:
   tag: wrf_initializer
   pullPolicy: Always
 
-wrfPopulateImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_populate
-  pullPolicy: Always
-
-wrfWpsImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_wps
-  pullPolicy: Always
-
-wrfWrfImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_wrf
-  pullPolicy: Always
-
-tdmToolImage:
-  repository: kikkomep/tdm-tools
-  tag: latest
-  pullPolicy: Always
-
-wrfDataInitImage:
-  repository: kikkomep/kube-openmpi
-  tag: wrf_4.0.3-1.10.7-centos7-0.7.0
-  pullPolicy: Always
-
 mpiImage:
   repository: kikkomep/kube-openmpi
   tag: wrf_4.0.3-1.10.7-centos7-0.7.0
   pullPolicy: Always
-  # pullSecrets:
-  # - name: ""
 
 mpiDataWriterImage:
   repository: kikkomep/kube-openmpi
@@ -43,6 +16,12 @@ mpiDataWriterImage:
 
 networkPolicy:
   enabled: false
+
+#sshKey:
+  # id_rsa: |
+  #   ...
+  # id_rsa_pub: |
+  #   ...
 
 sshGateway:
   enabled: false
@@ -53,7 +32,7 @@ sshGateway:
 # 'hostfile' will be automatically generated/updated
 # and is available at '/kube-openmpi/generated/hostfile'.
 mpiMaster:
-  debug_shell: true
+  debug_shell: false
 
   autoUpdateHostfile:
     enabled: true
@@ -88,7 +67,7 @@ mpiMaster:
   #   name: cache-volume
 
 mpiWorkers:
-  debug_shell: true
+  debug_shell: false
 
   num: 1
   # securityContext:
