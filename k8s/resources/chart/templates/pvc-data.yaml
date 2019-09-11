@@ -4,7 +4,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-init-data-claim
-  namespace: openmpi
+  namespace: {{ .Release.Namespace }}
   annotations:
     volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
@@ -20,7 +20,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-run-data-claim
-  namespace: openmpi
+  namespace: {{ .Release.Namespace }}
   annotations:
     volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
@@ -36,7 +36,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ .Release.Name }}-log-data-claim
-  namespace: openmpi
+  namespace: {{ .Release.Namespace }}
   annotations:
     volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
