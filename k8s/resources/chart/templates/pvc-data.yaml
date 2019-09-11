@@ -6,7 +6,7 @@ metadata:
   name: {{ .Release.Name }}-init-data-claim
   namespace: openmpi
   annotations:
-    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+    volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
   accessModes:
     - ReadWriteMany
@@ -22,7 +22,7 @@ metadata:
   name: {{ .Release.Name }}-run-data-claim
   namespace: openmpi
   annotations:
-    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+    volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
   accessModes:
     - ReadWriteMany
@@ -38,7 +38,7 @@ metadata:
   name: {{ .Release.Name }}-log-data-claim
   namespace: openmpi
   annotations:
-    volume.beta.kubernetes.io/storage-class: "nfs-tdm-stage-openmpi"
+    volume.beta.kubernetes.io/storage-class: "nfs-{{ .Release.Name }}"
 spec:
   accessModes:
     - ReadWriteMany
