@@ -864,7 +864,7 @@ def _make_parser():
     parser.add_argument('--debug', help='Enable debug mode',
                         action='store_true', default=None)
     parser.add_argument('--write-success', help='Write success file', action='store_true', default=None)
-    parser.add_argument('--keep-waiting', help='Keep writer waiting until timeout', default=None)
+    parser.add_argument('--keep-waiting', help='Keep writer waiting until timeout', default=None, type=int)
     parser.add_argument('-m', '--multiprocessing', help='Enable multiprocessing for parallel writes',
                         action='store_true', default=False)
     return parser
