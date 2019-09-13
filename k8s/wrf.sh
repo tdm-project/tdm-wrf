@@ -115,14 +115,14 @@ function init() {
 
 
 function exec() {    
-    if [[ ${PROCESSES} ]]; then
+    if [[ -z ${PROCESSES} ]]; then
         # exec the simultation
         kubectl exec "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -- /bin/bash -c \
                 'run-wrf ${RUN_DATA} ${PROCESSES} ${PROCESSES_PER_WORKER}'
     else 
         # exec the simultation
         kubectl exec "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -- /bin/bash -c \
-                'run-wrf ${RUN_DATA}' ${PROCESSES} ${PROCESSES_PER_WORKER}
+                "run-wrf \${RUN_DATA} ${PROCESSES} ${PROCESSES_PER_WORKER}"
     fi
     # wait until $MPI_CLUSTER_NAME-master is ready
     until [[ $(kubectl logs "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -c data-writer | grep "__SUCCESS__") ]]; do
@@ -303,113 +303,73 @@ function help() {
      -c|--config-dir                Path to the directory containing the WRF simulation's configuration
                                     (i.e., see examples 'single-domain', 'sardinia-low-res') 
      -n|--name                      WRF simulation name (used as prefix for all the k8s resources)
-     -p|--processes                 overwrites the number of processes defined on wrf.yaml
-    -np|--processes-per-worker      overwrites the number of processes per worker defined on wrf.yaml
     -ns|--namespace                 Kubernetes namespace to be used to deploy WRF infrastructure
+     -p|--processes                 overwrites the number of processes defined on wrf.yaml
+    -np|--processes-per-worker      overwrites the number of processes per worker defined on wrf.yaml    
     -sc|--storage-class             Kubernetes storage class to be used to store shared data between k8s components
     --hdfs-namespace                Namespace of the HDFS deployment to be used
     --hdfs-configmap                Name of config map containing the HDFS configuration
   " >&2
 }
 
-# extract value for a given option
-function parse_option(){
-  local opt=${1}
-  local value=$(echo ${opt} | sed -E 's/(--(-|[[:alnum:]])+)([[:space:]]|=)([[:alnum:]]+)/\4/')
-  debug_log "Value for option '${opt}' ==> ${value}"  
-  if [[ $opt != *"="* ]]; then
-    SKIP_EXTRA_ARG=true
-  fi
-  echo ${value}
-}
 
 # defaults
 KUBE_NAMESPACE=wrf-openmpi
 NFS_PROVISIONER=false
 
-# Collect arguments to be passed on to the next program in an array, rather than
-# a simple string. This choice lets us deal with arguments that contain spaces.
-EXTRA_ARGS=()
-
-# reset flag to skip the current option
-SKIP_EXTRA_ARG=false
-
 # parse arguments
-while [ -n "${1}" ]; do
-    # Copy so we can modify it (can't modify $1)
-    OPT="${1}"
-    # Detect argument termination
-    if [ x"${OPT}" = x"--" ]; then
-        shift
-        for OPT ; do
-            # append to array
-            EXTRA_ARGS+=("${OPT}")
-        done
-        break
-    fi
-    # Parse current opt
-    while [ x"${OPT}" != x"-" ] ; do
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+    opt="${1}"
+    value="${2}"
+    case $opt in
+
+        init | run | exec | destroy | clean )
+            COMMAND="$1" 
+            shift ;;
+
+        -h) help; exit 0 ;;
+        -v) print_version; exit 0 ;;
+
+        -c|--config-dir )
+            CONFIG_DIR="${value}"
+            shift 2 ;;
+
+        -n|--name )
+            RUN_ID="${value}"
+            shift 2 ;;
+
+        -ns|--namespace )
+            KUBE_NAMESPACE="${value}"
+            shift 2 ;;
+
+        -p|--processes )
+            PROCESSES="${value}"
+            shift 2 ;;
+
+        --processes-per-worker )
+            PROCESSES_PER_WORKER="${value}"
+            shift 2 ;;
+
+        -sc|--storage-class )
+            KUBE_STORAGE_CLASS="${value}"
+            shift 2 ;;
+
+        --hdfs-namespace )
+            HDFS_NAMESPACE="${value}"
+            shift 2 ;;
+
+        --hdfs-configmap )
+            HDFS_CONFIGMAP="${value}"
+            shift 2 ;;
         
-        # parse option
-        case "${OPT}" in
-          
-          init | run | exec | destroy | clean )
-              COMMAND="$1" ;;
-
-          -h) help; exit 0 ;;
-          -v) print_version; exit 0 ;;
-
-          -c | --config-dir )
-            CONFIG_DIR=$(parse_option "${OPT} $2") ;; 
-
-          -n | --name )
-            RUN_ID=$(parse_option "${OPT} $2") ;;
-
-          -ns | --namespace )
-            KUBE_NAMESPACE=$(parse_option "${OPT} $2") ;;
-
-          -p | --processes )
-            PROCESSES=$(parse_option "${OPT} $2") ;;
-
-          -np | --processes-per-worker )
-            PROCESSES_PER_WORKER=$(parse_option "${OPT} $2") ;;
-
-          -sc | --storage-class )
-            KUBE_STORAGE_CLASS=$(parse_option "${OPT} $2") ;;
-
-          --hdfs-namespace )
-            HDFS_NAMESPACE=$(parse_option "${OPT} $2") ;;
-
-          --hdfs-configmap )
-            HDFS_CONFIGMAP=$(parse_option "${OPT} $2") ;;
-
-          * )
-              debug_log "Default case: ${OPT}"
-              # append to array
-              EXTRA_ARGS+=("${OPT}") 
-              break
-              ;;
-        esac        
-        # Check for multiple short options
-        # NOTICE: be sure to update this pattern to match valid options
-        NEXTOPT="${OPT#-[cfr]}" # try removing single short opt
-        if [ x"${OPT}" != x"$NEXTOPT" ] ; then
-          OPT="-$NEXTOPT"  # multiple short opts, keep going
-        else          
-          break  # long form, exit inner loop
-        fi
-        break
-    done
-    # move to the next param
-    shift
-    # skip the next param if it comes from an option already parsed
-    if [[ ${1} && ${SKIP_EXTRA_ARG} == true ]]; then
-        # reset flag to skip the current option
-        SKIP_EXTRA_ARG=false
-        # skip the current extra arg
-        shift
-    fi
+        *)    # unknown option
+            POSITIONAL+=("$opt") # save it in an array for later
+            shift ;;
+    esac
 done
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
 # get the absolute path of CONFIG_DIR
 CONFIG_DIR=$(abspath ${CONFIG_DIR})
@@ -438,14 +398,16 @@ if [[ -z "${KUBE_STORAGE_CLASS}" ]]; then
     debug_log "STORAGE CLASS not defined. Using a new storage-class: '${KUBE_STORAGE_CLASS}'!"
     debug_log "NFS_PROVISIONER: ${NFS_PROVISIONER}"
 fi
-
-for i in "${EXTRA_ARGS[@]}"; do
-  debug_log "- ARG: ${i}"
+debug_log "Positional arguments..."
+for a in ${POSITIONAL[@]}
+do    
+    debug_log "=> ${a}"
 done
 
 AVAILABLE_COMMANDS="init run exec clean destroy"
 if [[ ${AVAILABLE_COMMANDS} == *"${COMMAND}"* ]]; then
-    ${COMMAND}
+    #${COMMAND} ;
+    echo "Ok";
 else
-    usage_error "Command not valid!"
+    usage_error "Command not valid!" ;
 fi
