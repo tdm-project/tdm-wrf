@@ -406,8 +406,7 @@ done
 
 AVAILABLE_COMMANDS="init run exec clean destroy"
 if [[ ${AVAILABLE_COMMANDS} == *"${COMMAND}"* ]]; then
-    #${COMMAND} ;
-    echo "Ok";
+    ${COMMAND} ;
 else
     usage_error "Command not valid!" ;
 fi
