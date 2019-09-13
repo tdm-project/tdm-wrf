@@ -62,6 +62,57 @@ function abspath() {
 # set config
 CONFIG_DIR=$(pwd)
 
+function wait_for_master_running() {
+    until [[ $(kubectl get pod "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" | grep Running) ]]; do
+        log "$(date): Waiting for WRF cluster to be ready..."
+        sleep 5
+    done
+    log "$(date): WRF cluster running"
+}
+
+function wait_for_cluster_termination() {
+    until [[ ! $(kubectl get pods -n "${KUBE_NAMESPACE}" | grep -E "${MPI_CLUSTER_NAME}-(master|worker)") ]]; do
+        log "$(date): Waiting for WRF cluster to terminate..."
+        sleep 5
+    done
+    log "$(date): WRF cluster terminated"
+}
+
+
+function wait_for_writers_termination() {
+    until [[ $(kubectl logs "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -c data-writer | grep "__SUCCESS__") ]]; do
+        log "$(date): Waiting for WRF writers to terminate..."
+        sleep 5
+    done
+    log "$(date): WRF writers terminated"
+}
+
+
+function install_nfs_provisioner() {
+    if [[ ${NFS_PROVISIONER} == "true" ]]; then
+        # install nfs-server provisioner
+        helm install --debug --namespace "${KUBE_NAMESPACE}" \
+                --name "${MPI_CLUSTER_NAME}-nfs-provisioner" \
+                -f ${CONFIG_DIR}/nfs-values.yaml \
+                --set storageClass.name="nfs-${MPI_CLUSTER_NAME}" \
+                stable/nfs-server-provisioner
+    fi
+}
+
+
+function install_hdfs_configmap() {
+    if [[ -n ${HDFS_CONFIGMAP} ]]; then
+        ../copy-hdfs-config-cm.sh ${HDFS_CONFIGMAP} ${HDFS_NAMESPACE} ${KUBE_NAMESPACE}
+    fi
+}
+
+
+function install_config_data() {
+    kubectl create configmap "${MPI_CLUSTER_NAME}-config-data" \
+            --namespace "${KUBE_NAMESPACE}" \
+            --from-file=${CONFIG_DIR}
+}
+
 
 function init() {
 
@@ -75,24 +126,13 @@ function init() {
     kubectl create namespace "${KUBE_NAMESPACE}"
 
     # if no storage class has been specified a dedicated NFS provisioner will be installed
-    if [[ ${NFS_PROVISIONER} == "true" ]]; then
-        # install nfs-server provisioner
-        helm install --debug --namespace "${KUBE_NAMESPACE}" \
-                --name "${MPI_CLUSTER_NAME}-nfs-provisioner" \
-                -f ${CONFIG_DIR}/nfs-values.yaml \
-                --set storageClass.name="nfs-${MPI_CLUSTER_NAME}" \
-                stable/nfs-server-provisioner
-    fi
+    install_nfs_provisioner
 
     # copy hdfs configmap 
-    if [[ -n ${HDFS_CONFIGMAP} ]]; then
-        ../copy-hdfs-config-cm.sh ${HDFS_CONFIGMAP} ${HDFS_NAMESPACE} ${KUBE_NAMESPACE}
-    fi
+    install_hdfs_configmap
 
     # create
-    kubectl create configmap "${MPI_CLUSTER_NAME}-config-data" \
-            --namespace "${KUBE_NAMESPACE}" \
-            --from-file=${CONFIG_DIR}
+    install_config_data
 
     # generate and deploy
     helm template chart \
@@ -106,11 +146,7 @@ function init() {
     | kubectl -n "${KUBE_NAMESPACE}" apply -f -
 
     # wait until $MPI_CLUSTER_NAME-master is ready
-    until [[ $(kubectl get pod "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" | grep Running) ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF cluster to be ready..."
-    done
+    wait_for_master_running
 }
 
 
@@ -126,11 +162,10 @@ function exec() {
     fi
     # wait until $MPI_CLUSTER_NAME-master is ready
     until [[ $(kubectl logs "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -c data-writer | grep "__SUCCESS__") ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF writers to finish..."
+        log "$(date): Waiting for WRF writers to finish..."
+        sleep 5        
     done
-    echo "DONE"
+    log "DONE"
 }
 
 
@@ -139,45 +174,29 @@ function clean() {
     # use resources as working-dir
     cd resources || usage_error "Unable to find the 'resources' folder!"
 
-    # delete
-    helm template chart \
-    --namespace "${KUBE_NAMESPACE}" \
-    --name "${MPI_CLUSTER_NAME}" \
-    -f "cluster.yaml" \
-    -f "${CONFIG_DIR}/wrf.yaml" \
-    -f ssh-key.yaml \
-    --set persistence.createPVC=false \
-    --set global.running.skip.prepare_wd=true,global.running.skip.geo_fetch=true,global.running.skip.gfs_fetch=true,global.running.skip.finalize=true \
-    --set mpiMaster.oneShot.enabled=false,mpiMaster.oneShot.autoScaleDownWorkers=false \
-    --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
-    | kubectl -n "${KUBE_NAMESPACE}" delete -f -
+    # render templates
+    k8s_resources="helm template chart \
+        --namespace "${KUBE_NAMESPACE}" \
+        --name "${MPI_CLUSTER_NAME}" \
+        -f "cluster.yaml" \
+        -f "${CONFIG_DIR}/wrf.yaml" \
+        -f ssh-key.yaml \
+        --set persistence.createPVC=false \
+        --set global.running.skip.prepare_wd=true,global.running.skip.geo_fetch=true,global.running.skip.gfs_fetch=true,global.running.skip.finalize=true \
+        --set mpiMaster.oneShot.enabled=false,mpiMaster.oneShot.autoScaleDownWorkers=false \
+        --set persistence.storage_class=${KUBE_STORAGE_CLASS}"
+    
+    # delete current instance
+    ${k8s_resources} | kubectl -n "${KUBE_NAMESPACE}" delete -f -
 
-    # # # wait until $MPI_CLUSTER_NAME-master is terminated
-    until [[ ! $(kubectl get pods -n "${KUBE_NAMESPACE}" | grep -E "${MPI_CLUSTER_NAME}-(master|worker)") ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF cluster to be ready..."
-    done
+    # wait until $MPI_CLUSTER_NAME-master is terminated
+    wait_for_cluster_termination
 
-    # # generate and deploy
-    helm template chart \
-    --namespace "${KUBE_NAMESPACE}" \
-    --name "${MPI_CLUSTER_NAME}" \
-    -f "cluster.yaml" \
-    -f "${CONFIG_DIR}/wrf.yaml" \
-    -f ssh-key.yaml \
-    --set persistence.createPVC=false \
-    --set global.running.skip.prepare_wd=true,global.running.skip.geo_fetch=true,global.running.skip.gfs_fetch=true,global.running.skip.finalize=true \
-    --set mpiMaster.oneShot.enabled=false,mpiMaster.oneShot.autoScaleDownWorkers=false \
-    --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
-    | kubectl -n "${KUBE_NAMESPACE}" apply -f -
+    # restart infrastructure
+    ${k8s_resources} | kubectl -n "${KUBE_NAMESPACE}" apply -f -
 
     # wait until $MPI_CLUSTER_NAME-master is ready
-    until [[ $(kubectl get pod "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" | grep Running) ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF cluster to be ready..."
-    done
+    wait_for_master_running
 }
 
 
@@ -193,24 +212,13 @@ function run() {
     kubectl create namespace "${KUBE_NAMESPACE}"
 
     # if no storage class has been specified a dedicated NFS provisioner will be installed
-    if [[ ${NFS_PROVISIONER} == "true" ]]; then
-        # install nfs-server provisioner
-        helm install --debug --namespace "${KUBE_NAMESPACE}" \
-                --name "${MPI_CLUSTER_NAME}-nfs-provisioner" \
-                -f ${CONFIG_DIR}/nfs-values.yaml \
-                --set storageClass.name="nfs-${MPI_CLUSTER_NAME}" \
-                stable/nfs-server-provisioner
-    fi
+    install_nfs_provisioner
 
     # copy hdfs configmap 
-    if [[ -n ${HDFS_CONFIGMAP} ]]; then
-        ../copy-hdfs-config-cm.sh ${HDFS_CONFIGMAP} ${HDFS_NAMESPACE} ${KUBE_NAMESPACE}
-    fi
+    install_hdfs_configmap
 
     # create
-    kubectl create configmap "${MPI_CLUSTER_NAME}-config-data" \
-            --namespace "${KUBE_NAMESPACE}" \
-            --from-file=${CONFIG_DIR}
+    install_config_data
 
     # generate and deploy
     helm template chart \
@@ -223,22 +231,13 @@ function run() {
     | kubectl -n "${KUBE_NAMESPACE}" apply -f -
 
     # wait until $MPI_CLUSTER_NAME-master is ready
-    until [[ $(kubectl get pod "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" | grep Running) ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF cluster to be ready..."
-    done
+    wait_for_master_running
 
     # show WRF master logs
     kubectl logs "${MPI_CLUSTER_NAME}-master" -f -c mpi-master
 
     # wait until $MPI_CLUSTER_NAME-master is ready
-    until [[ $(kubectl logs "${MPI_CLUSTER_NAME}-master" -n "${KUBE_NAMESPACE}" -c data-writer | grep "__SUCCESS__") ]]; do
-        date
-        sleep 5
-        echo "Waiting for WRF writers to finish..."
-    done
-    echo "DONE"
+    wait_for_writers_termination
 }
 
 
@@ -255,12 +254,8 @@ function destroy() {
         --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
         -f ssh-key.yaml | kubectl -n "${KUBE_NAMESPACE}" delete -f -
 
-    # wait until $MPI_CLUSTER_NAME-master is ready
-    until [[ ! $(kubectl get pods -n "${KUBE_NAMESPACE}" | grep "${MPI_CLUSTER_NAME}-master") ]]; do
-        date
-        sleep 10
-        echo "Waiting for WRF master to finish..."
-    done
+    # wait for MPI cluster termination
+    wait_for_cluster_termination
 
     # delete storage class
     if [[ ${NFS_PROVISIONER} == "true" ]]; then
@@ -268,7 +263,7 @@ function destroy() {
         helm delete "${MPI_CLUSTER_NAME}-nfs-provisioner"
     fi
 
-        # delete current configuration
+    # delete current configuration
     kubectl delete cm --namespace "${KUBE_NAMESPACE}" "${MPI_CLUSTER_NAME}-config-data"
 
     # delete the namespace
@@ -406,7 +401,7 @@ done
 
 AVAILABLE_COMMANDS="init run exec clean destroy"
 if [[ ${AVAILABLE_COMMANDS} == *"${COMMAND}"* ]]; then
-    ${COMMAND} ;
+    "${COMMAND}"
 else
     usage_error "Command not valid!" ;
 fi
