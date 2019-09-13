@@ -136,7 +136,7 @@ spec:
       imagePullPolicy: {{ .Values.kubectlImage.pullPolicy }}
       command: ['/bin/sh', '-c']
       args:
-        - rm -Rf ${LOG_DATA}/${HOSTNAME} ${RUN_DATA}/rsl.*
+        - rm -Rf ${LOG_DATA}/* ${RUN_DATA}/rsl.*
       env:
         - name: RUN_DATA
           value: {{ .Values.persistence.run_data.path }}
@@ -184,14 +184,18 @@ spec:
           value: {{ .Values.persistence.out_data.source_path }}
         - name: LOG_DATA
           value: {{ .Values.persistence.log_data.path }}
+        - name: PROCESSES
+          value: "{{ .Values.global.running.processes }}"
+        - name: PROCESSES_PER_WORKER
+          value: "{{ .Values.global.running.processes_per_worker }}"
       {{- if .Values.mpiMaster.oneShot.enabled }} 
         - name: ONE_SHOT
           value: "true"
       command: [
         "/init.sh", "run-wrf", 
         "{{ .Values.persistence.run_data.path }}", 
-         "{{ .Values.global.running.processes }}",
-         "{{ .Values.global.running.processes_per_worker }}"
+        "{{ .Values.global.running.processes }}",
+        "{{ .Values.global.running.processes_per_worker }}"
         ]      
       {{ end }}
       volumeMounts:
