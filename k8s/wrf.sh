@@ -142,7 +142,7 @@ function init() {
     -f "${CONFIG_DIR}/wrf.yaml" \
     -f ssh-key.yaml \
     --set mpiMaster.oneShot.enabled=false,mpiMaster.oneShot.autoScaleDownWorkers=false \
-    --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
+    --set persistence.storage_class=${KUBE_STORAGE_CLASS} ${WRITERS_OPT} \
     | kubectl -n "${KUBE_NAMESPACE}" apply -f -
 
     # wait until $MPI_CLUSTER_NAME-master is ready
@@ -181,7 +181,7 @@ function clean() {
         -f "cluster.yaml" \
         -f "${CONFIG_DIR}/wrf.yaml" \
         -f ssh-key.yaml \
-        --set persistence.createPVC=false \
+        --set persistence.createPVC=false ${WRITERS_OPT} \
         --set global.running.skip.prepare_wd=true,global.running.skip.geo_fetch=true,global.running.skip.gfs_fetch=true,global.running.skip.finalize=true \
         --set mpiMaster.oneShot.enabled=false,mpiMaster.oneShot.autoScaleDownWorkers=false \
         --set persistence.storage_class=${KUBE_STORAGE_CLASS}"
@@ -227,7 +227,7 @@ function run() {
     -f "cluster.yaml" \
     -f "${CONFIG_DIR}/wrf.yaml" \
     -f ssh-key.yaml \
-    --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
+    --set persistence.storage_class=${KUBE_STORAGE_CLASS} ${WRITERS_OPT} \
     | kubectl -n "${KUBE_NAMESPACE}" apply -f -
 
     # wait until $MPI_CLUSTER_NAME-master is ready
@@ -250,7 +250,7 @@ function destroy() {
         --namespace "${KUBE_NAMESPACE}" \
         --name "${MPI_CLUSTER_NAME}" \
         -f "cluster.yaml" \
-        -f "${CONFIG_DIR}/wrf.yaml" \
+        -f "${CONFIG_DIR}/wrf.yaml" ${WRITERS_OPT} \
         --set persistence.storage_class=${KUBE_STORAGE_CLASS} \
         -f ssh-key.yaml | kubectl -n "${KUBE_NAMESPACE}" delete -f -
 
@@ -304,6 +304,7 @@ function help() {
     -sc|--storage-class             Kubernetes storage class to be used to store shared data between k8s components
     --hdfs-namespace                Namespace of the HDFS deployment to be used
     --hdfs-configmap                Name of config map containing the HDFS configuration
+    --disable-writers               Disable writers responsible for copying the output of a WRF simulation
   " >&2
 }
 
@@ -358,6 +359,9 @@ do
         --hdfs-configmap )
             HDFS_CONFIGMAP="${value}"
             shift 2 ;;
+        --disable-writers )
+            WRITERS_OPT="--set persistence.enable_writer=false"
+            shift ;;
         
         *)    # unknown option
             POSITIONAL+=("$opt") # save it in an array for later
@@ -387,6 +391,7 @@ debug_log "EXTRA ARGS: ${EXTRA_ARGS}"
 debug_log "STORAGE CLASS: ${KUBE_STORAGE_CLASS}"
 debug_log "HDFS NAMESPACE: ${HDFS_NAMESPACE}"
 debug_log "HDFS CONFIGMAP: ${HDFS_CONFIGMAP}"
+debug_log "WRITERS_OPT: ${WRITERS_OPT}"
 if [[ -z "${KUBE_STORAGE_CLASS}" ]]; then
     KUBE_STORAGE_CLASS="nfs-${MPI_CLUSTER_NAME}"
     NFS_PROVISIONER="true"
