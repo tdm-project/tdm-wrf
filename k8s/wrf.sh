@@ -260,7 +260,7 @@ function destroy() {
     # delete storage class
     if [[ ${NFS_PROVISIONER} == "true" ]]; then
         #kubectl delete sc nfs-${MPI_CLUSTER_NAME}
-        helm delete "${MPI_CLUSTER_NAME}-nfs-provisioner"
+        helm delete "${MPI_CLUSTER_NAME}-nfs-provisioner" --purge
     fi
 
     # delete current configuration
